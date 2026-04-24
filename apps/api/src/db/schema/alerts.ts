@@ -1,3 +1,4 @@
+
 import { pgTable, uuid, varchar, text, doublePrecision, boolean, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
 
 // ─── Alert Type Enum ─────────────────────────────────
