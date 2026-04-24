@@ -1,0 +1,31 @@
+{
+  "name": "iot-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IoT Dashboard Tracking Platform - Monorepo",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:push": "pnpm --filter @iot-platform/api db:push",
+    "db:seed": "pnpm --filter @iot-platform/api db:seed",
+    "db:studio": "pnpm --filter @iot-platform/api db:studio"
+  },
+  "keywords": [
+    "iot",
+    "dashboard",
+    "tracking",
+    "mqtt"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "devDependencies": {
+    "turbo": "^2.9.6"
+  }
+}

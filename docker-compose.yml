@@ -1,0 +1,118 @@
+version: "3.9"
+
+services:
+  # ─── Database ───────────────────────────────────────
+  iot-postgres:
+    image: postgres:16-alpine
+    container_name: iot-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iot_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iot_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-iot_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iot_admin -d iot_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Cache ──────────────────────────────────────────
+  iot-redis:
+    image: redis:7-alpine
+    container_name: iot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MQTT Broker ────────────────────────────────────
+  iot-mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: iot-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # ─── API Backend ────────────────────────────────────
+  iot-api:
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile
+    container_name: iot-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-iot_admin}:${POSTGRES_PASSWORD:-iot_secret}@iot-postgres:5432/${POSTGRES_DB:-iot_platform}
+      REDIS_URL: redis://iot-redis:6379
+      MQTT_URL: mqtt://iot-mosquitto:1883
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
+    depends_on:
+      iot-postgres:
+        condition: service_healthy
+      iot-redis:
+        condition: service_healthy
+      iot-mosquitto:
+        condition: service_started
+
+  # ─── Admin Web ──────────────────────────────────────
+  iot-admin-web:
+    build:
+      context: .
+      dockerfile: ./docker/admin-web/Dockerfile
+    container_name: iot-admin-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - iot-api
+
+  # ─── Tenant Web ─────────────────────────────────────
+  iot-tenant-web:
+    build:
+      context: .
+      dockerfile: ./docker/tenant-web/Dockerfile
+    container_name: iot-tenant-web
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - iot-api
+
+  # ─── Reverse Proxy ─────────────────────────────────
+  iot-nginx:
+    image: nginx:1.25-alpine
+    container_name: iot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - iot-api
+      - iot-admin-web
+      - iot-tenant-web
+
+volumes:
+  postgres_data:
+  redis_data:
+  mosquitto_data:
+  mosquitto_log:
