@@ -2,14 +2,25 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { DeviceListPanel } from '../../components/monitor/DeviceListPanel';
 import { MapView } from '../../components/monitor/MapView';
+import { DeviceDetailSidebar } from '../../components/monitor/DeviceDetailSidebar';
 import { useDevices } from '../../hooks/useDevices';
+import { useReverseGeocode } from '../../hooks/useReverseGeocode';
 import type { Device } from '../../types/device';
 
 export function MonitorObjectsPage() {
   const [selectedDevice, setSelectedDevice] = useState<Device | undefined>();
   const { data, isLoading, isError } = useDevices();
 
+  const { address, loading: addressLoading } = useReverseGeocode(
+    selectedDevice?.lat ?? null,
+    selectedDevice?.lng ?? null,
+  );
+
   const devices = data?.data ?? [];
+
+  const handleSelect = (device: Device) => {
+    setSelectedDevice((prev) => (prev?.id === device.id ? undefined : device));
+  };
 
   return (
     <div className="objects-page">
@@ -26,7 +37,7 @@ export function MonitorObjectsPage() {
           <DeviceListPanel
             devices={devices}
             selectedId={selectedDevice?.id}
-            onSelect={setSelectedDevice}
+            onSelect={handleSelect}
           />
         )}
       </aside>
@@ -36,7 +47,15 @@ export function MonitorObjectsPage() {
         <MapView
           devices={devices}
           selectedId={selectedDevice?.id}
-          onSelect={setSelectedDevice}
+          onSelect={handleSelect}
+        />
+
+        {/* Detail sidebar overlays map on right */}
+        <DeviceDetailSidebar
+          device={selectedDevice}
+          onClose={() => setSelectedDevice(undefined)}
+          address={address}
+          addressLoading={addressLoading}
         />
       </main>
     </div>

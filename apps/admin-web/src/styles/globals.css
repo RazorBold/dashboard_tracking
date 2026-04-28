@@ -1134,6 +1134,253 @@ button, input, textarea, select {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Device Detail Sidebar
+   ═══════════════════════════════════════════════════════ */
+.detail-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background: white;
+  border-left: 1px solid var(--slate-200);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  animation: slideInLeft 0.2s ease;
+  overflow: hidden;
+}
+
+.detail-sidebar__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--slate-100);
+  flex-shrink: 0;
+}
+
+.detail-sidebar__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail-sidebar__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--slate-800);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-sidebar__imei {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--slate-400);
+}
+
+.detail-sidebar__model {
+  font-size: 11px;
+  color: var(--slate-500);
+  font-weight: 500;
+}
+
+.detail-sidebar__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--slate-400);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.detail-sidebar__close:hover {
+  background: var(--slate-100);
+  color: var(--slate-700);
+}
+
+.detail-sidebar__section {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--slate-100);
+  flex-shrink: 0;
+}
+
+/* Status badges */
+.detail-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+.detail-badge--green { background: #dcfce7; color: #15803d; }
+.detail-badge--gray  { background: var(--slate-100); color: var(--slate-600); }
+.detail-badge--yellow { background: #fef9c3; color: #a16207; }
+.detail-badge--red   { background: #fee2e2; color: #dc2626; }
+
+/* Tab bar */
+.detail-sidebar__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--slate-200);
+  flex-shrink: 0;
+}
+
+.detail-sidebar__tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.detail-sidebar__tab:hover {
+  color: var(--slate-700);
+}
+.detail-sidebar__tab--active {
+  color: var(--primary-600);
+  border-bottom-color: var(--primary-600);
+}
+
+/* Body / rows */
+.detail-sidebar__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+}
+
+.detail-sidebar__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+}
+
+.detail-sidebar__icon {
+  color: var(--slate-400);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.detail-sidebar__row-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.detail-sidebar__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--slate-400);
+}
+
+.detail-sidebar__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-sidebar__value {
+  font-size: 13px;
+  color: var(--slate-700);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.detail-sidebar__value--mono {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.detail-sidebar__muted {
+  font-size: 13px;
+  color: var(--slate-400);
+}
+
+.detail-sidebar__loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--slate-400);
+}
+
+.detail-sidebar__coords {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-sidebar__coords span {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--slate-700);
+}
+
+.detail-sidebar__fmt-btn {
+  padding: 2px 7px;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  background: white;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--slate-500);
+  cursor: pointer;
+}
+.detail-sidebar__fmt-btn:hover {
+  background: var(--slate-50);
+  color: var(--primary-600);
+  border-color: var(--primary-300);
+}
+
+.detail-sidebar__no-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--slate-400);
+}
+
+.detail-sidebar__info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.detail-sidebar__info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--slate-50);
+}
+
+/* Make objects-page__map relative for sidebar positioning */
+.objects-page__map {
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════
    Map View
    ═══════════════════════════════════════════════════════ */
 .map-view {
