@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +18,6 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -53,7 +52,7 @@ export function LoginForm() {
       toast.success(`Welcome back, ${user.name}!`);
 
       // Redirect to dashboard
-      navigate('/dashboard', { replace: true });
+      navigate('/monitor/objects', { replace: true });
     } catch (error: any) {
       const message =
         error.response?.data?.message ||
@@ -63,8 +62,6 @@ export function LoginForm() {
       toast.error(message);
     }
   };
-
-  const rememberMe = watch('rememberMe');
 
   return (
     <div className="flex flex-col">

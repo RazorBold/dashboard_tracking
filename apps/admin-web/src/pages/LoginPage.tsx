@@ -10,7 +10,7 @@ export function LoginPage() {
   useEffect(() => {
     // If already authenticated, redirect to dashboard
     if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate('/monitor/objects', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
