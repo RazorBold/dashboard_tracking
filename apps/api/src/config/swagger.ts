@@ -8,7 +8,7 @@ const options: swaggerJsdoc.Options = {
       title: 'IoT Platform API',
       version: '1.0.0',
       description:
-        'REST API for IoT Dashboard Tracking Platform — Authentication & Core endpoints',
+        'REST API for IoT Dashboard Tracking Platform — Authentication, Devices, Vehicles & Device Groups',
       contact: {
         name: 'IoT Platform Dev Team',
       },
