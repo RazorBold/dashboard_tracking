@@ -10,6 +10,26 @@ export interface Device {
   lat?: number | null;
   lng?: number | null;
   speed?: number | null;
+  // --- New Dummy Telemetry Data ---
+  accStatus?: boolean;
+  parkedDuration?: string;
+  batteryVoltage?: string;
+  batteryLevel?: number;
+  gnssType?: string;
+  satellites?: number;
+  gsmSignal?: string;
+  lastOnline?: string;
+  lastFix?: string;
+  todayMileage?: number;
+  // --- New Dummy Vehicle Info ---
+  vehicle?: {
+    ownerName: string;
+    phone: string;
+    plateNo: string;
+    make: string;
+    model: string;
+    vin: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

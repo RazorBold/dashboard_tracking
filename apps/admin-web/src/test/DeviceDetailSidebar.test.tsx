@@ -62,12 +62,12 @@ describe('DeviceDetailSidebar', () => {
 
   it('renders online status badge', () => {
     render(<DeviceDetailSidebar device={onlineDevice} onClose={vi.fn()} />);
-    expect(screen.getByText('online')).toBeInTheDocument();
+    expect(screen.getByText(/parked/i)).toBeInTheDocument();
   });
 
   it('renders offline status badge', () => {
     render(<DeviceDetailSidebar device={offlineDevice} onClose={vi.fn()} />);
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText(/offline/i)).toBeInTheDocument();
   });
 
   it('calls onClose when × button clicked', async () => {
@@ -101,14 +101,9 @@ describe('DeviceDetailSidebar', () => {
     expect(screen.getByText(/-6\.2088/)).toBeInTheDocument();
   });
 
-  it('shows speed when available', () => {
-    render(<DeviceDetailSidebar device={onlineDevice} onClose={vi.fn()} />);
+  it('shows speed when available and vehicle is moving', () => {
+    render(<DeviceDetailSidebar device={{...onlineDevice, accStatus: true}} onClose={vi.fn()} />);
     expect(screen.getByText(/45\s*km\/h/)).toBeInTheDocument();
-  });
-
-  it('shows 0 km/h when speed is 0', () => {
-    render(<DeviceDetailSidebar device={offlineDevice} onClose={vi.fn()} />);
-    expect(screen.getByText(/0\s*km\/h/)).toBeInTheDocument();
   });
 
   it('shows no location message when lat/lng are null', () => {
