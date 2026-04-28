@@ -1,19 +1,44 @@
-import { LayoutGrid, Radio } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { DeviceListPanel } from '../../components/monitor/DeviceListPanel';
+import { MapView } from '../../components/monitor/MapView';
+import { useDevices } from '../../hooks/useDevices';
+import type { Device } from '../../types/device';
 
 export function MonitorObjectsPage() {
+  const [selectedDevice, setSelectedDevice] = useState<Device | undefined>();
+  const { data, isLoading, isError } = useDevices();
+
+  const devices = data?.data ?? [];
+
   return (
-    <div className="placeholder-page">
-      <div className="placeholder-page__icon">
-        <LayoutGrid size={48} />
-      </div>
-      <h1 className="placeholder-page__title">Objects</h1>
-      <p className="placeholder-page__desc">
-        Real-time monitoring of all tracked devices and vehicles on the map.
-      </p>
-      <div className="placeholder-page__badge">
-        <Radio size={14} className="placeholder-page__pulse" />
-        Coming in Phase 2
-      </div>
+    <div className="objects-page">
+      {/* Left panel */}
+      <aside className="objects-page__panel">
+        {isLoading ? (
+          <div className="objects-page__loading">
+            <Loader2 size={24} className="animate-spin" />
+            <span>Loading devices…</span>
+          </div>
+        ) : isError ? (
+          <div className="objects-page__error">Failed to load devices.</div>
+        ) : (
+          <DeviceListPanel
+            devices={devices}
+            selectedId={selectedDevice?.id}
+            onSelect={setSelectedDevice}
+          />
+        )}
+      </aside>
+
+      {/* Map area */}
+      <main className="objects-page__map">
+        <MapView
+          devices={devices}
+          selectedId={selectedDevice?.id}
+          onSelect={setSelectedDevice}
+        />
+      </main>
     </div>
   );
 }
