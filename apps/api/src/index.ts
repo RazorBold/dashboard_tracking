@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 
-import { env, logger, swaggerSpec } from './config';
+import { env, logger, swaggerSpec, mqttClient } from './config';
 import { apiRouter } from './routes';
 import { notFoundHandler, errorHandler } from './middleware';
 
@@ -74,12 +74,16 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+import { initWebSocket } from './config/websocket';
+
 // ─── Start Server ─────────────────────────────────────
 const server = app.listen(env.PORT, () => {
   logger.info(`🚀 API server running on http://localhost:${env.PORT}`);
   logger.info(`📖 Swagger UI available at http://localhost:${env.PORT}/api/docs`);
   logger.info(`🌿 Environment: ${env.NODE_ENV}`);
 });
+
+initWebSocket(server);
 
 // ─── Graceful Shutdown ────────────────────────────────
 const shutdown = (signal: string) => {

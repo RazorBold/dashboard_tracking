@@ -60,11 +60,16 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-iot_admin}:${POSTGRES_PASSWORD:-iot_secret}@iot-postgres:5432/${POSTGRES_DB:-iot_platform}
       REDIS_URL: redis://iot-redis:6379
       MQTT_URL: mqtt://iot-mosquitto:1883
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change_me_super_secret_access_key_at_least_32ch}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_super_secret_refresh_key_at_least_32c}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      COOKIE_SECRET: ${COOKIE_SECRET:-change_me_cookie_secret_key_in_production}
     depends_on:
       iot-postgres:
         condition: service_healthy

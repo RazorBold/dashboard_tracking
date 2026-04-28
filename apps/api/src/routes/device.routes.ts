@@ -1,9 +1,10 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, IRouter } from 'express';
 import { z } from 'zod';
 import { validate, verifyToken } from '../middleware';
 import * as deviceService from '../services/device.service';
+import * as trackingService from '../services/tracking.service';
 
-export const deviceRouter = Router();
+export const deviceRouter: IRouter = Router();
 deviceRouter.use(verifyToken);
 
 // ─── Validation Schemas ───────────────────────────────
@@ -28,6 +29,11 @@ const listQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(['online', 'offline', 'inactive', 'expired']).optional(),
   groupId: z.string().uuid().optional(),
+});
+
+const positionHistoryQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
 });
 
 // ─── Routes ───────────────────────────────────────────
@@ -130,7 +136,7 @@ deviceRouter.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const device = await deviceService.getDeviceById(req.params.id);
+      const device = await deviceService.getDeviceById(req.params.id as string);
       if (!device) {
         res.status(404).json({ success: false, message: 'Device not found' });
         return;
@@ -216,7 +222,7 @@ deviceRouter.put(
   validate(updateDeviceSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const device = await deviceService.updateDevice(req.params.id, req.body);
+      const device = await deviceService.updateDevice(req.params.id as string, req.body);
       res.json({ success: true, message: 'Device updated', data: device });
     } catch (err) {
       next(err);
@@ -247,8 +253,80 @@ deviceRouter.delete(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const device = await deviceService.deleteDevice(req.params.id);
+      const device = await deviceService.deleteDevice(req.params.id as string);
       res.json({ success: true, message: 'Device deleted', data: device });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * @swagger
+ * /api/devices/{id}/position:
+ *   get:
+ *     summary: Get latest position of a device
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Latest position data
+ */
+deviceRouter.get(
+  '/:id/position',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const position = await trackingService.getLatestPosition(req.params.id as string);
+      res.json({ success: true, data: position });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * @swagger
+ * /api/devices/{id}/positions:
+ *   get:
+ *     summary: Get position history of a device
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: from
+ *         required: true
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: to
+ *         required: true
+ *         schema: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: List of historical positions
+ */
+deviceRouter.get(
+  '/:id/positions',
+  validate(positionHistoryQuerySchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { from, to } = req.query as { from: string; to: string };
+      const positions = await trackingService.getPositionHistory(
+        req.params.id as string,
+        new Date(from),
+        new Date(to)
+      );
+      res.json({ success: true, data: positions });
     } catch (err) {
       next(err);
     }

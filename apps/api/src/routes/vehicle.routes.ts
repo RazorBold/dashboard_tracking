@@ -1,9 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, IRouter } from 'express';
 import { z } from 'zod';
 import { validate, verifyToken } from '../middleware';
 import * as vehicleService from '../services/vehicle.service';
 
-export const vehicleRouter = Router();
+export const vehicleRouter: IRouter = Router();
 vehicleRouter.use(verifyToken);
 
 // ─── Validation Schemas ───────────────────────────────
@@ -142,7 +142,7 @@ vehicleRouter.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const vehicle = await vehicleService.getVehicleById(req.params.id);
+      const vehicle = await vehicleService.getVehicleById(req.params.id as string);
       if (!vehicle) {
         res.status(404).json({ success: false, message: 'Vehicle not found' });
         return;
@@ -218,7 +218,7 @@ vehicleRouter.put(
   validate(updateVehicleSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const vehicle = await vehicleService.updateVehicle(req.params.id, req.body);
+      const vehicle = await vehicleService.updateVehicle(req.params.id as string, req.body);
       res.json({ success: true, message: 'Vehicle updated', data: vehicle });
     } catch (err) {
       next(err);
@@ -249,7 +249,7 @@ vehicleRouter.delete(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const vehicle = await vehicleService.deleteVehicle(req.params.id);
+      const vehicle = await vehicleService.deleteVehicle(req.params.id as string);
       res.json({ success: true, message: 'Vehicle deleted', data: vehicle });
     } catch (err) {
       next(err);
@@ -290,7 +290,7 @@ vehicleRouter.post(
   validate(bindDeviceSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const vehicle = await vehicleService.bindDevice(req.params.id, req.body.deviceId);
+      const vehicle = await vehicleService.bindDevice(req.params.id as string, req.body.deviceId);
       res.json({ success: true, message: 'Device bound to vehicle', data: vehicle });
     } catch (err) {
       next(err);
@@ -321,7 +321,7 @@ vehicleRouter.delete(
   '/:id/bind-device',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const vehicle = await vehicleService.unbindDevice(req.params.id);
+      const vehicle = await vehicleService.unbindDevice(req.params.id as string);
       res.json({ success: true, message: 'Device unbound from vehicle', data: vehicle });
     } catch (err) {
       next(err);
