@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const axiosClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -14,7 +14,13 @@ axiosClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && originalRequest) {
+    if (error.response?.status === 401 && originalRequest && !(originalRequest as any)._retry) {
+      if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+        return Promise.reject(error);
+      }
+
+      (originalRequest as any)._retry = true;
+
       try {
         // Try to refresh token
         const response = await axios.post(
@@ -25,7 +31,7 @@ axiosClient.interceptors.response.use(
           }
         );
 
-        const { accessToken } = response.data;
+        const { accessToken } = response.data.data;
         
         // Store new token
         localStorage.setItem('accessToken', accessToken);
