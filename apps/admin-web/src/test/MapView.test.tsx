@@ -11,8 +11,8 @@ vi.mock('react-leaflet', () => ({
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Marker: ({ children, ...props }: any) => (
-    <div data-testid="map-marker" data-selected={props['data-selected']}>{children}</div>
+  Marker: ({ children, zIndexOffset, ...props }: any) => (
+    <div data-testid="map-marker" data-selected={zIndexOffset === 1000 ? 'true' : 'false'}>{children}</div>
   ),
   Popup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="map-popup">{children}</div>

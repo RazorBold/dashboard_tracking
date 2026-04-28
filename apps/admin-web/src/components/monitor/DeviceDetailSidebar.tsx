@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { X, Loader2, MapPin, Zap } from 'lucide-react';
+import { 
+  X, Loader2, MapPin, Zap, Activity, Battery, Satellite, Signal, 
+  Calendar, Car, Hash, User, Phone, Shield, Navigation, Play, 
+  Terminal, Settings, Share2 
+} from 'lucide-react';
 import type { Device, DeviceStatus } from '../../types/device';
 
 interface Props {
@@ -10,7 +14,7 @@ interface Props {
 }
 
 type CoordFormat = 'decimal' | 'dms';
-type Tab = 'live' | 'device';
+type Tab = 'live' | 'tracks' | 'device' | 'command' | 'configure' | 'share';
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
   online: 'detail-badge detail-badge--green',
@@ -35,6 +39,25 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
   if (!device) return null;
 
   const hasLocation = device.lat != null && device.lng != null;
+  
+  // Compute descriptive status
+  let descriptiveStatus = device.status.charAt(0).toUpperCase() + device.status.slice(1);
+  if (device.status === 'online') {
+    if (device.accStatus) {
+      descriptiveStatus = `Moving (${device.speed ?? 0} km/h)`;
+    } else {
+      descriptiveStatus = `Parked (ACC: OFF) ${device.parkedDuration ? `- ${device.parkedDuration}` : ''}`;
+    }
+  }
+
+  const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'live', label: 'Live', icon: <Navigation size={14} /> },
+    { id: 'tracks', label: 'Tracks', icon: <Play size={14} /> },
+    { id: 'device', label: 'Device', icon: <Car size={14} /> },
+    { id: 'command', label: 'Command', icon: <Terminal size={14} /> },
+    { id: 'configure', label: 'Configure', icon: <Settings size={14} /> },
+    { id: 'share', label: 'Share', icon: <Share2 size={14} /> },
+  ];
 
   return (
     <div className="detail-sidebar" role="complementary" aria-label="Device detail">
@@ -57,20 +80,21 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
       </div>
 
       {/* Status */}
-      <div className="detail-sidebar__section">
-        <span className={STATUS_CLASS[device.status]}>{device.status}</span>
+      <div className="detail-sidebar__section detail-sidebar__section--padded">
+        <span className={STATUS_CLASS[device.status]}>{descriptiveStatus}</span>
       </div>
 
       {/* Tab bar */}
       <div className="detail-sidebar__tabs">
-        {(['live', 'device'] as Tab[]).map((tab) => (
+        {TABS.map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`detail-sidebar__tab${activeTab === tab ? ' detail-sidebar__tab--active' : ''}`}
-            aria-label={tab.charAt(0).toUpperCase() + tab.slice(1)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`detail-sidebar__tab${activeTab === tab.id ? ' detail-sidebar__tab--active' : ''}`}
+            aria-label={tab.label}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab.icon}
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
@@ -78,7 +102,7 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
       {/* Tab content */}
       <div className="detail-sidebar__body">
         {activeTab === 'live' && (
-          <>
+          <div className="detail-sidebar__live-tab">
             {/* Address */}
             <div className="detail-sidebar__row">
               <MapPin size={14} className="detail-sidebar__icon" />
@@ -100,7 +124,7 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
             {/* Coordinates */}
             {hasLocation ? (
               <div className="detail-sidebar__row">
-                <MapPin size={14} className="detail-sidebar__icon" />
+                <MapPin size={14} className="detail-sidebar__icon detail-sidebar__icon--blue" />
                 <div className="detail-sidebar__row-content" data-testid="coordinates">
                   <div className="detail-sidebar__label-row">
                     <span className="detail-sidebar__label">Coordinates</span>
@@ -142,42 +166,104 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
               </div>
             )}
 
-            {/* Speed */}
-            <div className="detail-sidebar__row">
-              <Zap size={14} className="detail-sidebar__icon" />
-              <div className="detail-sidebar__row-content">
-                <span className="detail-sidebar__label">Speed</span>
-                <span className="detail-sidebar__value">
-                  {device.speed ?? 0} km/h
-                </span>
+            {/* Today's Activity Grid */}
+            <div className="detail-sidebar__grid-section">
+              <h3 className="detail-sidebar__section-title">Today's Activity</h3>
+              <div className="detail-sidebar__grid">
+                <div className="detail-sidebar__grid-card">
+                  <Activity size={16} className="detail-sidebar__grid-icon" />
+                  <div>
+                    <span className="detail-sidebar__grid-label">Mileage</span>
+                    <span className="detail-sidebar__grid-value">{device.todayMileage ?? 0} km</span>
+                  </div>
+                </div>
+                <div className="detail-sidebar__grid-card">
+                  <Battery size={16} className="detail-sidebar__grid-icon" />
+                  <div>
+                    <span className="detail-sidebar__grid-label">Battery</span>
+                    <span className="detail-sidebar__grid-value">
+                      {device.batteryVoltage ?? '—'}
+                      {device.batteryLevel != null ? ` (${device.batteryLevel}%)` : ''}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'device' && (
-          <>
-            <div className="detail-sidebar__info-grid">
-              <div className="detail-sidebar__info-item">
-                <span className="detail-sidebar__label">Name</span>
-                <span className="detail-sidebar__value">{device.name}</span>
-              </div>
-              <div className="detail-sidebar__info-item">
-                <span className="detail-sidebar__label">IMEI</span>
-                <span className="detail-sidebar__value detail-sidebar__value--mono">
-                  {device.imei}
-                </span>
-              </div>
-              <div className="detail-sidebar__info-item">
-                <span className="detail-sidebar__label">Model</span>
-                <span className="detail-sidebar__value">{device.model ?? '—'}</span>
-              </div>
-              <div className="detail-sidebar__info-item">
-                <span className="detail-sidebar__label">Status</span>
-                <span className={STATUS_CLASS[device.status]}>{device.status}</span>
+          <div className="detail-sidebar__device-tab">
+            {/* Device Info */}
+            <div className="detail-sidebar__info-section">
+              <h3 className="detail-sidebar__section-title">Telemetry & Network</h3>
+              <div className="detail-sidebar__info-grid">
+                <div className="detail-sidebar__info-item">
+                  <span className="detail-sidebar__label"><Satellite size={12} /> GNSS Type</span>
+                  <span className="detail-sidebar__value">{device.gnssType ?? '—'}</span>
+                </div>
+                <div className="detail-sidebar__info-item">
+                  <span className="detail-sidebar__label"><MapPin size={12} /> Satellites</span>
+                  <span className="detail-sidebar__value">{device.satellites ?? 0}</span>
+                </div>
+                <div className="detail-sidebar__info-item">
+                  <span className="detail-sidebar__label"><Signal size={12} /> GSM Signal</span>
+                  <span className="detail-sidebar__value">{device.gsmSignal ?? '—'}</span>
+                </div>
+                <div className="detail-sidebar__info-item">
+                  <span className="detail-sidebar__label"><Calendar size={12} /> Last Online</span>
+                  <span className="detail-sidebar__value">{device.lastOnline ? new Date(device.lastOnline).toLocaleString() : '—'}</span>
+                </div>
+                <div className="detail-sidebar__info-item">
+                  <span className="detail-sidebar__label"><Calendar size={12} /> Last Fix</span>
+                  <span className="detail-sidebar__value">{device.lastFix ? new Date(device.lastFix).toLocaleString() : '—'}</span>
+                </div>
               </div>
             </div>
-          </>
+
+            {/* Vehicle Info */}
+            <div className="detail-sidebar__info-section">
+              <h3 className="detail-sidebar__section-title">Linked Vehicle</h3>
+              {device.vehicle ? (
+                <div className="detail-sidebar__info-grid">
+                  <div className="detail-sidebar__info-item detail-sidebar__info-item--full">
+                    <span className="detail-sidebar__label"><Car size={12} /> License Plate</span>
+                    <span className="detail-sidebar__value detail-sidebar__value--lg">{device.vehicle.plateNo}</span>
+                  </div>
+                  <div className="detail-sidebar__info-item">
+                    <span className="detail-sidebar__label"><Hash size={12} /> Make & Model</span>
+                    <span className="detail-sidebar__value">{device.vehicle.make} {device.vehicle.model}</span>
+                  </div>
+                  <div className="detail-sidebar__info-item">
+                    <span className="detail-sidebar__label"><Shield size={12} /> VIN</span>
+                    <span className="detail-sidebar__value detail-sidebar__value--mono">{device.vehicle.vin}</span>
+                  </div>
+                  <div className="detail-sidebar__info-item">
+                    <span className="detail-sidebar__label"><User size={12} /> Owner</span>
+                    <span className="detail-sidebar__value">{device.vehicle.ownerName}</span>
+                  </div>
+                  <div className="detail-sidebar__info-item">
+                    <span className="detail-sidebar__label"><Phone size={12} /> Phone</span>
+                    <span className="detail-sidebar__value">{device.vehicle.phone}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="detail-sidebar__muted detail-sidebar__muted--box">
+                  No vehicle linked to this device.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {(['tracks', 'command', 'configure', 'share'] as Tab[]).includes(activeTab) && (
+          <div className="detail-sidebar__placeholder">
+            <div className="detail-sidebar__placeholder-icon">
+              {TABS.find(t => t.id === activeTab)?.icon}
+            </div>
+            <h3>{TABS.find(t => t.id === activeTab)?.label} Module</h3>
+            <p>This module will be implemented in subsequent phases.</p>
+          </div>
         )}
       </div>
     </div>
