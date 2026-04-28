@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { devices, devicePositions } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, and, gte, lte } from 'drizzle-orm';
 import { redisClient } from '../config/redis';
 import { logger } from '../config/logger';
 import { broadcastLocation } from '../config/websocket';
@@ -89,7 +89,40 @@ export const getLatestPosition = async (deviceId: string) => {
   return position || null;
 };
 
-import { and, gte, lte } from 'drizzle-orm';
+export const getLatestPositions = async (
+  deviceIds: string[],
+): Promise<Record<string, { lat: number; lng: number; speed: number }>> => {
+  if (deviceIds.length === 0) return {};
+
+  const result: Record<string, { lat: number; lng: number; speed: number }> = {};
+
+  // Fetch latest position for each device (uses same path as getLatestPosition)
+  await Promise.all(
+    deviceIds.map(async (id) => {
+      try {
+        // Try Redis first
+        const cached = await redisClient.get(`device:${id}:position`);
+        if (cached) {
+          const pos = JSON.parse(cached);
+          result[id] = { lat: pos.lat, lng: pos.lng, speed: pos.speed ?? 0 };
+          return;
+        }
+        // Fallback to DB
+        const pos = await db.query.devicePositions.findFirst({
+          where: eq(devicePositions.deviceId, id),
+          orderBy: (p, { desc: d }) => [d(p.timestamp)],
+        });
+        if (pos) {
+          result[id] = { lat: pos.latitude, lng: pos.longitude, speed: pos.speed ?? 0 };
+        }
+      } catch {
+        // skip this device on error
+      }
+    }),
+  );
+
+  return result;
+};
 
 export const getPositionHistory = async (deviceId: string, from: Date, to: Date) => {
   return await db.query.devicePositions.findMany({

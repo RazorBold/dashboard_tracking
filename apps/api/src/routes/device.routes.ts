@@ -73,8 +73,21 @@ deviceRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await deviceService.listDevices(req.query as any);
-      res.json({ success: true, ...result });
-    } catch (err) {
+
+      // Enrich each device with its latest GPS position
+      const deviceIds = result.data.map((d) => d.id);
+      const positions = await trackingService.getLatestPositions(deviceIds);
+
+      const data = result.data.map((d) => ({
+        ...d,
+        lat: positions[d.id]?.lat ?? null,
+        lng: positions[d.id]?.lng ?? null,
+        speed: positions[d.id]?.speed ?? null,
+      }));
+
+      res.json({ success: true, data, meta: result.meta });
+    } catch (err: any) {
+      console.error('GET /devices error:', err?.message, err?.stack);
       next(err);
     }
   },

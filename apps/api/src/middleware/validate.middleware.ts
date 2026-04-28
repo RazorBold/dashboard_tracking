@@ -18,7 +18,13 @@ export const validate =
       });
       return;
     }
-    // Replace request data with parsed/coerced values
-    req[source] = result.data;
+    // Replace request data with parsed/coerced values.
+    // Express 5 defines req.query and req.params as getter-only properties,
+    // so we mutate the existing object instead of reassigning.
+    if (source === 'body') {
+      req.body = result.data;
+    } else {
+      Object.assign(req[source], result.data);
+    }
     next();
   };
