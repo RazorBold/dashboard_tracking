@@ -34,7 +34,7 @@ export function LoginForm() {
       const response = await axiosClient.post<AuthResponse>(
         '/auth/login',
         {
-          email: data.email,
+          email: data.email.trim(),
           password: data.password,
         }
       );
