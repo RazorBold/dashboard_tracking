@@ -10,6 +10,8 @@ import type { JwtPayload } from '../middleware';
 
 const SALT_ROUNDS = 12;
 
+import crypto from 'crypto';
+
 // ─── Helper: Generate Access Token ───────────────────
 const generateAccessToken = (user: User): string => {
   const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
@@ -17,7 +19,8 @@ const generateAccessToken = (user: User): string => {
     email: user.email,
     role: user.role,
     orgId: user.organizationId ?? null,
-  };
+    jti: crypto.randomUUID(),
+  } as any;
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'],
   });
@@ -25,7 +28,7 @@ const generateAccessToken = (user: User): string => {
 
 // ─── Helper: Generate Refresh Token ──────────────────
 const generateRefreshToken = (user: User): string => {
-  return jwt.sign({ sub: user.id }, env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ sub: user.id, jti: crypto.randomUUID() }, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
   });
 };

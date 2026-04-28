@@ -26,7 +26,14 @@ function renderNavbar(path = '/monitor/objects') {
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'admin' },
+    user: { 
+      id: '1', 
+      name: 'Test User', 
+      email: 'test@example.com', 
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
     token: 'mock-token',
     isAuthenticated: true,
   });

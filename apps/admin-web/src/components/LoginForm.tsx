@@ -39,7 +39,7 @@ export function LoginForm() {
         }
       );
 
-      const { accessToken, user } = response.data;
+      const { accessToken, user } = response.data.data;
 
       // Store in local storage
       localStorage.setItem('accessToken', accessToken);
@@ -176,7 +176,7 @@ export function LoginForm() {
 
       {/* Footer Text */}
       <p className="text-center text-sm text-gray-500 mt-8">
-        Demo: admin@iot.local / password123
+        Demo: admin@demo.com / admin123
       </p>
     </div>
   );

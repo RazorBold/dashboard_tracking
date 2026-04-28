@@ -1,9 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, IRouter } from 'express';
 import { z } from 'zod';
 import { validate, verifyToken } from '../middleware';
 import * as groupService from '../services/device-group.service';
 
-export const deviceGroupRouter = Router();
+export const deviceGroupRouter: IRouter = Router();
 deviceGroupRouter.use(verifyToken);
 
 const createGroupSchema = z.object({
@@ -104,7 +104,7 @@ deviceGroupRouter.put(
   validate(updateGroupSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const group = await groupService.updateDeviceGroup(req.params.id, req.body);
+      const group = await groupService.updateDeviceGroup(req.params.id as string, req.body);
       res.json({ success: true, message: 'Group updated', data: group });
     } catch (err) {
       next(err);
@@ -135,7 +135,7 @@ deviceGroupRouter.delete(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const group = await groupService.deleteDeviceGroup(req.params.id);
+      const group = await groupService.deleteDeviceGroup(req.params.id as string);
       res.json({ success: true, message: 'Group deleted', data: group });
     } catch (err) {
       next(err);
@@ -176,7 +176,7 @@ deviceGroupRouter.post(
   validate(assignDevicesSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await groupService.assignDevicesToGroup(req.params.id, req.body.deviceIds);
+      const result = await groupService.assignDevicesToGroup(req.params.id as string, req.body.deviceIds);
       res.json({ success: true, message: `${result.assigned} device(s) assigned to group`, data: result });
     } catch (err) {
       next(err);

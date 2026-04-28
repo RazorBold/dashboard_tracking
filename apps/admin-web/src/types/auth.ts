@@ -9,8 +9,12 @@ export interface User {
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  user: User;
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    user: User;
+  };
 }
 
 export interface LoginRequest {
