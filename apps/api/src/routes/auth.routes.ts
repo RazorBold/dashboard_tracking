@@ -229,6 +229,8 @@ authRouter.post(
       const result = await authService.refresh(token);
       res.status(200).json({ success: true, data: result });
     } catch (err) {
+      // Clear the stale cookie so the browser stops sending it on retries
+      res.clearCookie('refreshToken', { path: '/api/auth' });
       next(err);
     }
   },

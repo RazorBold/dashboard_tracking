@@ -11,7 +11,95 @@ import { drivers } from './schema/drivers';
 import { geofences } from './schema/geofences';
 import { devicePositions } from './schema/device-positions';
 
-// ─── Seed Script ─────────────────────────────────────
+type FleetKey = 'jkt' | 'jtm' | 'bdg' | 'bli' | 'sumut';
+type DeviceStatus = 'online' | 'offline' | 'inactive' | 'expired';
+type VehicleType = 'car' | 'motorcycle' | 'truck' | 'bus' | 'van' | 'other';
+
+interface DeviceSeed {
+  name: string;
+  imei: string;
+  model: string;
+  status: DeviceStatus;
+  fleet: FleetKey;
+  vehicleType: VehicleType;
+  plateNo: string;
+  make: string;
+  vehicleModel: string;
+  ownerName: string;
+  hoursOffline?: number;
+}
+
+const FLEET_CENTERS: Record<FleetKey, { lat: number; lng: number }> = {
+  jkt: { lat: -6.2088, lng: 106.8456 },
+  jtm: { lat: -7.2575, lng: 112.7521 },
+  bdg: { lat: -6.9175, lng: 107.6191 },
+  bli: { lat: -8.4095, lng: 115.1889 },
+  sumut: { lat: 3.5952, lng: 98.6722 },
+};
+
+const DEVICE_SEEDS: DeviceSeed[] = [
+  // ─── Fleet Jakarta (12) ─────────────────────────────────────────
+  { name: 'Vario 160 – CM',         imei: '352503095920796', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'motorcycle', plateNo: 'R 6076 IJ',    make: 'Honda',      vehicleModel: 'Vario 160',     ownerName: 'Chandra Maulana' },
+  { name: 'Avanza B-1234-ABC',      imei: '861234567890123', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 1234 ABC',   make: 'Toyota',     vehicleModel: 'Avanza',        ownerName: 'Budi Santoso' },
+  { name: 'Truck Box B-5678-DEF',   imei: '869876543210987', model: 'TK119',  status: 'offline',  fleet: 'jkt', vehicleType: 'truck',      plateNo: 'B 5678 DEF',   make: 'Mitsubishi', vehicleModel: 'Colt Diesel',   ownerName: 'PT Demo Transport', hoursOffline: 3 },
+  { name: 'Innova B-9012-GHI',      imei: '864567890123456', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 9012 GHI',   make: 'Toyota',     vehicleModel: 'Innova',        ownerName: 'Dewi Rahayu' },
+  { name: 'Xpander B-3456-JKL',     imei: '861100200300001', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 3456 JKL',   make: 'Mitsubishi', vehicleModel: 'Xpander',       ownerName: 'Andi Pratama' },
+  { name: 'Fortuner B-7890-MNO',    imei: '861100200300002', model: 'GV300',  status: 'online',   fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 7890 MNO',   make: 'Toyota',     vehicleModel: 'Fortuner',      ownerName: 'Hendra Wijaya' },
+  { name: 'Hilux B-2233-PQR',       imei: '861100200300003', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 2233 PQR',   make: 'Toyota',     vehicleModel: 'Hilux',         ownerName: 'PT Logistik Nusantara' },
+  { name: 'Hino Dutro B-4455-STU',  imei: '861100200300004', model: 'TK119',  status: 'online',   fleet: 'jkt', vehicleType: 'truck',      plateNo: 'B 4455 STU',   make: 'Hino',       vehicleModel: 'Dutro',         ownerName: 'PT Demo Transport' },
+  { name: 'Pajero Sport B-6677-VWX',imei: '861100200300005', model: 'GV300',  status: 'inactive', fleet: 'jkt', vehicleType: 'car',        plateNo: 'B 6677 VWX',   make: 'Mitsubishi', vehicleModel: 'Pajero Sport',  ownerName: 'Maya Sari' },
+  { name: 'NMAX B-8899-YZA',        imei: '861100200300006', model: 'GT06N',  status: 'expired',  fleet: 'jkt', vehicleType: 'motorcycle', plateNo: 'B 8899 YZA',   make: 'Yamaha',     vehicleModel: 'NMAX',          ownerName: 'Eko Saputra' },
+  { name: 'Granmax B-1100-BCD',     imei: '861100200300007', model: 'GT06N',  status: 'online',   fleet: 'jkt', vehicleType: 'van',        plateNo: 'B 1100 BCD',   make: 'Daihatsu',   vehicleModel: 'Granmax',       ownerName: 'PT Logistik Nusantara' },
+  { name: 'Beat B-3344-EFG',        imei: '861100200300008', model: 'GT06N',  status: 'offline',  fleet: 'jkt', vehicleType: 'motorcycle', plateNo: 'B 3344 EFG',   make: 'Honda',      vehicleModel: 'Beat',          ownerName: 'Rina Kurniawati', hoursOffline: 12 },
+
+  // ─── Fleet Jawa Timur (10) ──────────────────────────────────────
+  { name: 'Bus Pariwisata W-1234',   imei: '867890123456789', model: 'TK103B', status: 'online',  fleet: 'jtm', vehicleType: 'bus',        plateNo: 'W 1234 JKL',   make: 'Mercedes-Benz', vehicleModel: 'OF 1723',    ownerName: 'PT Demo Transport' },
+  { name: 'Tronton W-5678-JKL',      imei: '862345678901234', model: 'TK119',  status: 'offline', fleet: 'jtm', vehicleType: 'truck',      plateNo: 'W 5678 JKL',   make: 'Volvo',         vehicleModel: 'FM',         ownerName: 'PT Logistik Jatim', hoursOffline: 8 },
+  { name: 'Pick-up L-3344-MNO',      imei: '865678901234567', model: 'GT06N',  status: 'inactive',fleet: 'jtm', vehicleType: 'van',        plateNo: 'L 3344 MNO',   make: 'Daihatsu',      vehicleModel: 'Gran Max',   ownerName: 'Ahmad Fauzi' },
+  { name: 'Avanza N-1122-ABC SUB',   imei: '862200300400001', model: 'GT06N',  status: 'online',  fleet: 'jtm', vehicleType: 'car',        plateNo: 'N 1122 ABC',   make: 'Toyota',        vehicleModel: 'Avanza',     ownerName: 'Joko Prasetyo' },
+  { name: 'Innova N-3344-DEF SUB',   imei: '862200300400002', model: 'GT06N',  status: 'online',  fleet: 'jtm', vehicleType: 'car',        plateNo: 'N 3344 DEF',   make: 'Toyota',        vehicleModel: 'Innova',     ownerName: 'Siti Aminah' },
+  { name: 'Xpander N-5566-GHI MLG',  imei: '862200300400003', model: 'GT06N',  status: 'online',  fleet: 'jtm', vehicleType: 'car',        plateNo: 'N 5566 GHI',   make: 'Mitsubishi',    vehicleModel: 'Xpander',    ownerName: 'Bambang Suryadi' },
+  { name: 'Hilux W-7788-JKL SDA',    imei: '862200300400004', model: 'GT06N',  status: 'offline', fleet: 'jtm', vehicleType: 'car',        plateNo: 'W 7788 JKL',   make: 'Toyota',        vehicleModel: 'Hilux',      ownerName: 'PT Sidoarjo Trans', hoursOffline: 5 },
+  { name: 'Bus Hino N-9900-MNO',     imei: '862200300400005', model: 'TK103B', status: 'online',  fleet: 'jtm', vehicleType: 'bus',        plateNo: 'N 9900 MNO',   make: 'Hino',          vehicleModel: 'RN285',      ownerName: 'PT Demo Transport' },
+  { name: 'Colt Diesel N-2233-PQR',  imei: '862200300400006', model: 'TK119',  status: 'online',  fleet: 'jtm', vehicleType: 'truck',      plateNo: 'N 2233 PQR',   make: 'Mitsubishi',    vehicleModel: 'Colt Diesel',ownerName: 'PT Logistik Jatim' },
+  { name: 'Fortuner W-4455-STU',     imei: '862200300400007', model: 'GV300',  status: 'online',  fleet: 'jtm', vehicleType: 'car',        plateNo: 'W 4455 STU',   make: 'Toyota',        vehicleModel: 'Fortuner',   ownerName: 'Dian Permata' },
+
+  // ─── Fleet Bandung (8) ──────────────────────────────────────────
+  { name: 'Avanza D-1234-ABC BDG',   imei: '863300400500001', model: 'GT06N',  status: 'online',  fleet: 'bdg', vehicleType: 'car',        plateNo: 'D 1234 ABC',   make: 'Toyota',        vehicleModel: 'Avanza',     ownerName: 'Asep Sunandar' },
+  { name: 'Innova D-5678-DEF Dago',  imei: '863300400500002', model: 'GT06N',  status: 'online',  fleet: 'bdg', vehicleType: 'car',        plateNo: 'D 5678 DEF',   make: 'Toyota',        vehicleModel: 'Innova',     ownerName: 'Neneng Hasanah' },
+  { name: 'Hilux D-9012-GHI Pst',    imei: '863300400500003', model: 'GT06N',  status: 'online',  fleet: 'bdg', vehicleType: 'car',        plateNo: 'D 9012 GHI',   make: 'Toyota',        vehicleModel: 'Hilux',      ownerName: 'PT Bandung Trans' },
+  { name: 'Vario D-3456-JKL Chmps',  imei: '863300400500004', model: 'GT06N',  status: 'online',  fleet: 'bdg', vehicleType: 'motorcycle', plateNo: 'D 3456 JKL',   make: 'Honda',         vehicleModel: 'Vario 160',  ownerName: 'Iqbal Maulana' },
+  { name: 'Xenia D-7890-MNO',        imei: '863300400500005', model: 'GT06N',  status: 'online',  fleet: 'bdg', vehicleType: 'car',        plateNo: 'D 7890 MNO',   make: 'Daihatsu',      vehicleModel: 'Xenia',      ownerName: 'Rian Hidayat' },
+  { name: 'Fuso D-2233-PQR',         imei: '863300400500006', model: 'TK119',  status: 'online',  fleet: 'bdg', vehicleType: 'truck',      plateNo: 'D 2233 PQR',   make: 'Mitsubishi',    vehicleModel: 'Fuso',       ownerName: 'PT Cargo Bandung' },
+  { name: 'Xpander D-4455-STU',      imei: '863300400500007', model: 'GT06N',  status: 'offline', fleet: 'bdg', vehicleType: 'car',        plateNo: 'D 4455 STU',   make: 'Mitsubishi',    vehicleModel: 'Xpander',    ownerName: 'Sri Wahyuni', hoursOffline: 4 },
+  { name: 'NMAX D-6677-VWX',         imei: '863300400500008', model: 'GT06N',  status: 'offline', fleet: 'bdg', vehicleType: 'motorcycle', plateNo: 'D 6677 VWX',   make: 'Yamaha',        vehicleModel: 'NMAX',       ownerName: 'Fajar Nugroho', hoursOffline: 16 },
+
+  // ─── Fleet Bali (5) ─────────────────────────────────────────────
+  { name: 'Innova DK-1234-ABC DPS',  imei: '864400500600001', model: 'GT06N',  status: 'online',  fleet: 'bli', vehicleType: 'car',        plateNo: 'DK 1234 ABC',  make: 'Toyota',        vehicleModel: 'Innova',     ownerName: 'I Made Wirawan' },
+  { name: 'Avanza DK-5678-DEF Kuta', imei: '864400500600002', model: 'GT06N',  status: 'online',  fleet: 'bli', vehicleType: 'car',        plateNo: 'DK 5678 DEF',  make: 'Toyota',        vehicleModel: 'Avanza',     ownerName: 'Ni Kadek Sari' },
+  { name: 'Vario DK-9012-GHI Ubud',  imei: '864400500600003', model: 'GT06N',  status: 'online',  fleet: 'bli', vehicleType: 'motorcycle', plateNo: 'DK 9012 GHI',  make: 'Honda',         vehicleModel: 'Vario 160',  ownerName: 'I Wayan Adi' },
+  { name: 'Hilux DK-3456-JKL Sanur', imei: '864400500600004', model: 'GT06N',  status: 'online',  fleet: 'bli', vehicleType: 'car',        plateNo: 'DK 3456 JKL',  make: 'Toyota',        vehicleModel: 'Hilux',      ownerName: 'PT Bali Logistik' },
+  { name: 'Bus Pariwisata DK-7890',  imei: '864400500600005', model: 'TK103B', status: 'offline', fleet: 'bli', vehicleType: 'bus',        plateNo: 'DK 7890 MNO',  make: 'Hino',          vehicleModel: 'RN285',      ownerName: 'PT Bali Tours', hoursOffline: 6 },
+
+  // ─── Fleet Sumatera Utara (5) ───────────────────────────────────
+  { name: 'Avanza BK-1234-ABC MDN',  imei: '865500600700001', model: 'GT06N',  status: 'online',  fleet: 'sumut', vehicleType: 'car',      plateNo: 'BK 1234 ABC',  make: 'Toyota',        vehicleModel: 'Avanza',     ownerName: 'Marbun Siregar' },
+  { name: 'Innova BK-5678-DEF Pln',  imei: '865500600700002', model: 'GT06N',  status: 'online',  fleet: 'sumut', vehicleType: 'car',      plateNo: 'BK 5678 DEF',  make: 'Toyota',        vehicleModel: 'Innova',     ownerName: 'Ratna Sari Dewi' },
+  { name: 'Tronton BK-9012-GHI Bln', imei: '865500600700003', model: 'TK119',  status: 'online',  fleet: 'sumut', vehicleType: 'truck',    plateNo: 'BK 9012 GHI',  make: 'Volvo',         vehicleModel: 'FM',         ownerName: 'PT Sumut Cargo' },
+  { name: 'Hilux BK-3456-JKL',       imei: '865500600700004', model: 'GT06N',  status: 'offline', fleet: 'sumut', vehicleType: 'car',      plateNo: 'BK 3456 JKL',  make: 'Toyota',        vehicleModel: 'Hilux',      ownerName: 'PT Logistik Medan', hoursOffline: 10 },
+  { name: 'Pajero BK-7890-MNO',      imei: '865500600700005', model: 'GV300',  status: 'expired', fleet: 'sumut', vehicleType: 'car',      plateNo: 'BK 7890 MNO',  make: 'Mitsubishi',    vehicleModel: 'Pajero Sport',ownerName: 'Surya Tanjung' },
+];
+
+const INSURANCE_MIX: Array<'active' | 'expiring_soon' | 'expired' | 'none'> = [
+  'active','active','active','active','active','active',
+  'expiring_soon','expiring_soon',
+  'expired',
+  'none','none',
+];
+
+function jitter(): number {
+  return (Math.random() - 0.5) * 0.05; // ± 0.025 deg ≈ ± 2.7 km
+}
+
 async function seed() {
   const connectionString =
     process.env.DATABASE_URL || 'postgres://iot_admin:iot_secret@localhost:5432/iot_platform';
@@ -39,7 +127,7 @@ async function seed() {
       name: 'PT Demo Transport',
       slug: 'demo-transport',
       plan: 'pro',
-      maxDevices: '50',
+      maxDevices: '100',
       contactEmail: 'admin@demotransport.com',
       contactPhone: '08123456789',
       address: 'Jl. Sisingamangaraja, Jakarta Selatan',
@@ -68,317 +156,168 @@ async function seed() {
 
   // ─── 3. Device Groups ───────────────────────────────
   console.log('  📂 Creating device groups...');
-  const [jakartaGroup] = await db
-    .insert(deviceGroups)
-    .values({
-      name: 'Fleet Jakarta',
-      description: 'Kendaraan area DKI Jakarta',
-      organizationId: org.id,
-    })
-    .returning();
+  const [grpJkt] = await db.insert(deviceGroups).values({
+    name: 'Fleet Jakarta', description: 'Kendaraan area DKI Jakarta', organizationId: org.id,
+  }).returning();
+  const [grpJtm] = await db.insert(deviceGroups).values({
+    name: 'Fleet Jawa Timur', description: 'Kendaraan area Jawa Timur', organizationId: org.id,
+  }).returning();
+  const [grpBdg] = await db.insert(deviceGroups).values({
+    name: 'Fleet Bandung', description: 'Kendaraan area Bandung & Jawa Barat', organizationId: org.id,
+  }).returning();
+  const [grpBli] = await db.insert(deviceGroups).values({
+    name: 'Fleet Bali', description: 'Kendaraan area Bali', organizationId: org.id,
+  }).returning();
+  const [grpSum] = await db.insert(deviceGroups).values({
+    name: 'Fleet Sumatera Utara', description: 'Kendaraan area Sumatera Utara', organizationId: org.id,
+  }).returning();
 
-  const [jatimGroup] = await db
-    .insert(deviceGroups)
-    .values({
-      name: 'Fleet Jawa Timur',
-      description: 'Kendaraan area Jawa Timur',
-      organizationId: org.id,
-    })
-    .returning();
+  const groupIdByFleet: Record<FleetKey, string> = {
+    jkt: grpJkt.id, jtm: grpJtm.id, bdg: grpBdg.id, bli: grpBli.id, sumut: grpSum.id,
+  };
 
   // ─── 4. Devices ─────────────────────────────────────
-  console.log('  📡 Creating devices...');
+  console.log(`  📡 Creating ${DEVICE_SEEDS.length} devices...`);
   const now = new Date();
 
-  const insertedDevices = await db
-    .insert(devices)
-    .values([
-      {
-        name: 'Vario 160 – CM',
-        imei: '352503095920796',
-        model: 'GT06N',
-        status: 'online',
-        organizationId: org.id,
-        groupId: jakartaGroup.id,
-        activatedAt: new Date('2022-11-13T18:56:46Z'),
-        subscriptionExpiry: new Date('2032-11-14T00:00:00Z'),
-        expiresAt: new Date('2032-11-14T00:00:00Z'),
-        lastOnline: now,
-      },
-      {
-        name: 'Avanza B-1234-ABC',
-        imei: '861234567890123',
-        model: 'GT06N',
-        status: 'online',
-        organizationId: org.id,
-        groupId: jakartaGroup.id,
-        activatedAt: new Date('2023-05-20T10:00:00Z'),
-        subscriptionExpiry: new Date('2033-05-20T00:00:00Z'),
-        expiresAt: new Date('2033-05-20T00:00:00Z'),
-        lastOnline: now,
-      },
-      {
-        name: 'Truck Box B-5678-DEF',
-        imei: '869876543210987',
-        model: 'TK119',
-        status: 'offline',
-        organizationId: org.id,
-        groupId: jakartaGroup.id,
-        activatedAt: new Date('2024-01-10T08:00:00Z'),
-        subscriptionExpiry: new Date('2034-01-10T00:00:00Z'),
-        expiresAt: new Date('2034-01-10T00:00:00Z'),
-        lastOnline: new Date(now.getTime() - 3 * 60 * 60 * 1000), // 3h ago
-      },
-      {
-        name: 'Innova B-9012-GHI',
-        imei: '864567890123456',
-        model: 'GT06N',
-        status: 'online',
-        organizationId: org.id,
-        groupId: jakartaGroup.id,
-        activatedAt: new Date('2023-08-01T00:00:00Z'),
-        subscriptionExpiry: new Date('2033-08-01T00:00:00Z'),
-        expiresAt: new Date('2033-08-01T00:00:00Z'),
-        lastOnline: now,
-      },
-      {
-        name: 'Bus Pariwisata W-1234',
-        imei: '867890123456789',
-        model: 'TK103B',
-        status: 'online',
-        organizationId: org.id,
-        groupId: jatimGroup.id,
-        activatedAt: new Date('2023-03-15T00:00:00Z'),
-        subscriptionExpiry: new Date('2033-03-15T00:00:00Z'),
-        expiresAt: new Date('2033-03-15T00:00:00Z'),
-        lastOnline: now,
-      },
-      {
-        name: 'Tronton W-5678-JKL',
-        imei: '862345678901234',
-        model: 'TK119',
-        status: 'offline',
-        organizationId: org.id,
-        groupId: jatimGroup.id,
-        activatedAt: new Date('2022-07-20T00:00:00Z'),
-        subscriptionExpiry: new Date('2032-07-20T00:00:00Z'),
-        expiresAt: new Date('2032-07-20T00:00:00Z'),
-        lastOnline: new Date(now.getTime() - 8 * 60 * 60 * 1000), // 8h ago
-      },
-      {
-        name: 'Pick-up L-3344-MNO',
-        imei: '865678901234567',
-        model: 'GT06N',
-        status: 'inactive',
-        organizationId: org.id,
-        groupId: jatimGroup.id,
-        activatedAt: new Date('2021-11-01T00:00:00Z'),
-        subscriptionExpiry: new Date('2031-11-01T00:00:00Z'),
-        expiresAt: new Date('2031-11-01T00:00:00Z'),
-      },
-      {
-        name: 'Motor Kurir Z-0099',
-        imei: '868901234567890',
-        model: 'GT06N',
-        status: 'online',
-        organizationId: org.id,
-        groupId: jakartaGroup.id,
-        activatedAt: new Date('2024-06-01T00:00:00Z'),
-        subscriptionExpiry: new Date('2034-06-01T00:00:00Z'),
-        expiresAt: new Date('2034-06-01T00:00:00Z'),
-        lastOnline: now,
-      },
-    ])
-    .returning();
+  const insertedDevices = await db.insert(devices).values(
+    DEVICE_SEEDS.map((s, i) => ({
+      name: s.name,
+      imei: s.imei,
+      model: s.model,
+      status: s.status,
+      organizationId: org.id,
+      groupId: groupIdByFleet[s.fleet],
+      activatedAt: new Date(2022 + (i % 3), i % 12, 1 + (i % 27)),
+      subscriptionExpiry: new Date(2032 + (i % 3), i % 12, 1 + (i % 27)),
+      expiresAt: new Date(2032 + (i % 3), i % 12, 1 + (i % 27)),
+      lastOnline:
+        s.status === 'online' ? now :
+        s.status === 'offline' ? new Date(now.getTime() - (s.hoursOffline ?? 6) * 60 * 60 * 1000) :
+        s.status === 'inactive' ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) :
+        null, // expired
+    })),
+  ).returning();
 
-  // ─── 5. Device Positions (GPS coordinates) ──────────
-  console.log('  📍 Creating device positions...');
+  // ─── 5. Device Positions ────────────────────────────
+  console.log(`  📍 Creating ${insertedDevices.length} device positions...`);
+  for (let i = 0; i < insertedDevices.length; i++) {
+    const seed = DEVICE_SEEDS[i];
+    const dev = insertedDevices[i];
+    const center = FLEET_CENTERS[seed.fleet];
+    const isMoving = seed.status === 'online' && Math.random() > 0.3;
+    const ts = new Date(now.getTime() - Math.floor(Math.random() * 5 * 60 * 1000));
 
-  // GPS coordinates of real locations in Indonesia
-  const positionData = [
-    // Vario 160 – CM → area Kebayoran Baru, Jakarta Selatan (moving ~40 km/h)
-    { device: insertedDevices[0], lat: -6.2394, lng: 106.7983, speed: 42, heading: 90 },
-    // Avanza → area Sudirman, Jakarta Pusat (parked)
-    { device: insertedDevices[1], lat: -6.2088, lng: 106.8179, speed: 0, heading: 0 },
-    // Truck Box → Pelabuhan Tanjung Priok (last seen 3h ago)
-    { device: insertedDevices[2], lat: -6.1018, lng: 106.8817, speed: 0, heading: 0 },
-    // Innova → Tol Jagorawi km 10 (moving)
-    { device: insertedDevices[3], lat: -6.3270, lng: 106.8723, speed: 95, heading: 130 },
-    // Bus Pariwisata → Surabaya, Jl. Pemuda
-    { device: insertedDevices[4], lat: -7.2575, lng: 112.7521, speed: 28, heading: 270 },
-    // Tronton → Pelabuhan Tanjung Perak, Surabaya (parked 8h ago)
-    { device: insertedDevices[5], lat: -7.1977, lng: 112.7309, speed: 0, heading: 0 },
-    // Pick-up → Malang (inactive, old position)
-    { device: insertedDevices[6], lat: -7.9666, lng: 112.6326, speed: 0, heading: 0 },
-    // Motor Kurir → Gojek area Tangerang Selatan (moving fast)
-    { device: insertedDevices[7], lat: -6.2896, lng: 106.7172, speed: 65, heading: 45 },
-  ];
-
-  for (const p of positionData) {
-    const ts = new Date(now.getTime() - Math.floor(Math.random() * 5 * 60 * 1000)); // within last 5min
     await db.insert(devicePositions).values({
-      deviceId: p.device.id,
-      latitude: p.lat,
-      longitude: p.lng,
-      speed: p.speed,
-      heading: p.heading,
+      deviceId: dev.id,
+      latitude: center.lat + jitter(),
+      longitude: center.lng + jitter(),
+      speed: isMoving ? Math.floor(Math.random() * 80) + 5 : 0,
+      heading: Math.floor(Math.random() * 360),
+      altitude: 10 + Math.floor(Math.random() * 200),
       satellites: 8 + Math.floor(Math.random() * 6),
       gsmSignal: 70 + Math.floor(Math.random() * 30),
       batteryVoltage: 12 + Math.random() * 0.5,
-      accStatus: p.speed > 0 ? 1 : 0,
+      accStatus: isMoving ? 1 : 0,
+      mileage: Math.floor(Math.random() * 300000),
       timestamp: ts,
     });
   }
 
-  // ─── 6. Vehicles ────────────────────────────────────
-  console.log('  🚗 Creating vehicles...');
-  await db.insert(vehicles).values([
-    {
-      plateNo: 'R 6076 IJ',
-      type: 'motorcycle',
-      make: 'Honda',
-      model: 'Vario 160',
-      maxSpeed: 120,
-      deviceId: insertedDevices[0].id,
-      organizationId: org.id,
-      status: 'active',
-      insuranceStatus: 'none',
-      accumulatedMileage: 71852,
-      ownerName: 'Chandra Maulana',
-      ownerPhone: '082321376118',
-    },
-    {
-      plateNo: 'B 1234 ABC',
-      type: 'car',
-      make: 'Toyota',
-      model: 'Avanza',
-      maxSpeed: 150,
-      deviceId: insertedDevices[1].id,
-      organizationId: org.id,
-      status: 'active',
-      insuranceStatus: 'active',
-      insuranceExpiry: new Date('2027-06-15T00:00:00Z'),
-      accumulatedMileage: 45230,
-      ownerName: 'Budi Santoso',
-      ownerPhone: '081234567890',
-    },
-    {
-      plateNo: 'B 5678 DEF',
-      type: 'truck',
-      make: 'Mitsubishi',
-      model: 'Colt Diesel',
-      maxSpeed: 80,
-      deviceId: insertedDevices[2].id,
-      organizationId: org.id,
-      status: 'active',
-      insuranceStatus: 'expiring_soon',
-      insuranceExpiry: new Date('2026-06-01T00:00:00Z'),
-      accumulatedMileage: 128450,
-      ownerName: 'PT Demo Transport',
-      ownerPhone: '08123456789',
-    },
-    {
-      plateNo: 'B 9012 GHI',
-      type: 'car',
-      make: 'Toyota',
-      model: 'Innova',
-      maxSpeed: 160,
-      deviceId: insertedDevices[3].id,
-      organizationId: org.id,
-      status: 'active',
-      insuranceStatus: 'active',
-      insuranceExpiry: new Date('2028-01-01T00:00:00Z'),
-      accumulatedMileage: 33100,
-      ownerName: 'Dewi Rahayu',
-      ownerPhone: '085678901234',
-    },
-    {
-      plateNo: 'W 1234 JKL',
-      type: 'bus',
-      make: 'Mercedes-Benz',
-      model: 'OF 1723',
-      maxSpeed: 100,
-      deviceId: insertedDevices[4].id,
-      organizationId: org.id,
-      status: 'active',
-      insuranceStatus: 'active',
-      insuranceExpiry: new Date('2027-09-15T00:00:00Z'),
-      accumulatedMileage: 256800,
-      ownerName: 'PT Demo Transport',
-      ownerPhone: '08123456789',
-    },
-  ]);
+  // ─── 6. Vehicles (one per device) ───────────────────
+  console.log(`  🚗 Creating ${DEVICE_SEEDS.length} vehicles...`);
+  await db.insert(vehicles).values(
+    DEVICE_SEEDS.map((s, i) => {
+      const insurance = INSURANCE_MIX[i % INSURANCE_MIX.length];
+      const maxSpeedByType: Record<VehicleType, number> = {
+        motorcycle: 120, car: 160, truck: 80, bus: 100, van: 130, other: 100,
+      };
+      return {
+        plateNo: s.plateNo,
+        type: s.vehicleType,
+        make: s.make,
+        model: s.vehicleModel,
+        maxSpeed: maxSpeedByType[s.vehicleType],
+        deviceId: insertedDevices[i].id,
+        organizationId: org.id,
+        status: s.status === 'inactive' || s.status === 'expired' ? 'inactive' as const : 'active' as const,
+        insuranceStatus: insurance,
+        insuranceExpiry: insurance === 'none' ? null : new Date(2026 + (i % 4), i % 12, 1 + (i % 27)),
+        accumulatedMileage: 5000 + Math.floor(Math.random() * 245000),
+        ownerName: s.ownerName,
+        ownerPhone: `08${(1000000000 + i * 12345).toString().slice(0, 10)}`,
+      };
+    }),
+  );
 
-  // ─── 7. Drivers ─────────────────────────────────────
+  // ─── 7. Drivers (20) ────────────────────────────────
   console.log('  🧑‍✈️ Creating drivers...');
-  await db.insert(drivers).values([
-    {
-      driverNo: 'DDN1044796',
-      name: 'Chandra Maulana',
-      phone: '082321376118',
-      licenseNo: 'SIM-A-123456',
-      licenseStatus: 'Active',
-      status: 'active',
-      organizationId: org.id,
-    },
-    {
-      driverNo: 'DDN1044797',
-      name: 'Budi Santoso',
-      phone: '081234567890',
-      licenseNo: 'SIM-A-789012',
-      registerPlace: 'Jakarta',
-      registerDate: new Date('2023-01-15T00:00:00Z'),
-      licenseExpiry: new Date('2028-01-15T00:00:00Z'),
-      licenseStatus: 'Active',
-      status: 'active',
-      organizationId: org.id,
-      fleetName: 'Fleet Jakarta',
-    },
-    {
-      driverNo: 'DDN1044798',
-      name: 'Ahmad Fauzi',
-      phone: '087654321098',
-      licenseNo: 'SIM-B2-345678',
-      registerPlace: 'Surabaya',
-      registerDate: new Date('2022-06-20T00:00:00Z'),
-      licenseExpiry: new Date('2027-06-20T00:00:00Z'),
-      licenseStatus: 'Active',
-      status: 'active',
-      organizationId: org.id,
-      fleetName: 'Fleet Jawa Timur',
-    },
-  ]);
+  const driverNames = [
+    'Chandra Maulana','Budi Santoso','Ahmad Fauzi','Joko Prasetyo','Siti Aminah',
+    'Bambang Suryadi','Dewi Rahayu','Andi Pratama','Hendra Wijaya','Maya Sari',
+    'Rina Kurniawati','Eko Saputra','Asep Sunandar','Iqbal Maulana','Rian Hidayat',
+    'I Made Wirawan','Ni Kadek Sari','I Wayan Adi','Marbun Siregar','Ratna Sari Dewi',
+  ];
+  const fleetNames = ['Fleet Jakarta','Fleet Jakarta','Fleet Jakarta','Fleet Jakarta','Fleet Jakarta',
+                      'Fleet Jawa Timur','Fleet Jawa Timur','Fleet Jawa Timur','Fleet Jawa Timur',
+                      'Fleet Bandung','Fleet Bandung','Fleet Bandung',
+                      'Fleet Bali','Fleet Bali','Fleet Bali',
+                      'Fleet Sumatera Utara','Fleet Sumatera Utara','Fleet Sumatera Utara',
+                      'Fleet Jakarta','Fleet Jawa Timur'];
+  const licenseStatuses = ['Active','Active','Active','Active','Active',
+                           'Active','Active','Active','Active','Active',
+                           'Active','Active','Active','Active','Active',
+                           'Expiring','Expiring','Active','Active','Expired'];
 
-  // ─── 8. Geofences ───────────────────────────────────
+  await db.insert(drivers).values(
+    driverNames.map((name, i) => ({
+      driverNo: `DDN104480${i.toString().padStart(2, '0')}`,
+      name,
+      phone: `08${(2000000000 + i * 7777).toString().slice(0, 10)}`,
+      licenseNo: `SIM-${i % 2 === 0 ? 'A' : 'B2'}-${(100000 + i * 1234).toString()}`,
+      registerPlace: ['Jakarta','Surabaya','Bandung','Denpasar','Medan'][i % 5],
+      registerDate: new Date(2020 + (i % 5), i % 12, 1 + (i % 27)),
+      licenseExpiry: licenseStatuses[i] === 'Expired'
+        ? new Date(2025, 0, 15)
+        : licenseStatuses[i] === 'Expiring'
+          ? new Date(2026, 5, 1)
+          : new Date(2028 + (i % 3), i % 12, 1 + (i % 27)),
+      licenseStatus: licenseStatuses[i],
+      status: 'active' as const,
+      organizationId: org.id,
+      fleetName: fleetNames[i],
+    })),
+  );
+
+  // ─── 8. Geofences (8) ───────────────────────────────
   console.log('  🗺️ Creating geofences...');
   await db.insert(geofences).values([
-    {
-      name: 'Kantor Pusat',
-      type: 'circle',
-      geometry: { center: { lat: -6.2394, lng: 106.7983 }, radius: 200 },
-      organizationId: org.id,
-      description: 'Area kantor PT Demo Transport, Kebayoran Baru',
-    },
-    {
-      name: 'Depot Surabaya',
-      type: 'circle',
-      geometry: { center: { lat: -7.1977, lng: 112.7309 }, radius: 500 },
-      organizationId: org.id,
-      description: 'Area depot Surabaya dekat Tanjung Perak',
-    },
+    { name: 'Kantor Pusat Jakarta',  type: 'circle', geometry: { center: { lat: -6.2394, lng: 106.7983 }, radius: 200 }, organizationId: org.id, description: 'Area kantor PT Demo Transport, Kebayoran Baru' },
+    { name: 'Pool Cibitung',         type: 'circle', geometry: { center: { lat: -6.2647, lng: 107.0828 }, radius: 400 }, organizationId: org.id, description: 'Pool kendaraan Cibitung, Bekasi' },
+    { name: 'Pool Pulogebang',       type: 'circle', geometry: { center: { lat: -6.2014, lng: 106.9433 }, radius: 350 }, organizationId: org.id, description: 'Pool kendaraan Pulogebang, Jakarta Timur' },
+    { name: 'Depot Surabaya',        type: 'circle', geometry: { center: { lat: -7.1977, lng: 112.7309 }, radius: 500 }, organizationId: org.id, description: 'Area depot Surabaya dekat Tanjung Perak' },
+    { name: 'Depot Bandung',         type: 'circle', geometry: { center: { lat: -6.9039, lng: 107.6186 }, radius: 300 }, organizationId: org.id, description: 'Depot Bandung area Pasteur' },
+    { name: 'Terminal Ubung Bali',   type: 'circle', geometry: { center: { lat: -8.6378, lng: 115.2103 }, radius: 250 }, organizationId: org.id, description: 'Terminal Ubung, Denpasar' },
+    { name: 'Pelabuhan Belawan',     type: 'circle', geometry: { center: { lat: 3.7833,  lng: 98.6833  }, radius: 600 }, organizationId: org.id, description: 'Pelabuhan Belawan, Medan' },
+    { name: 'Depot Medan',           type: 'circle', geometry: { center: { lat: 3.5952,  lng: 98.6722  }, radius: 350 }, organizationId: org.id, description: 'Depot Medan kota' },
   ]);
 
   console.log('\n✅ Seed complete!');
+  const onlineCount  = DEVICE_SEEDS.filter((d) => d.status === 'online').length;
+  const offlineCount = DEVICE_SEEDS.filter((d) => d.status === 'offline').length;
+  const inactiveCount= DEVICE_SEEDS.filter((d) => d.status === 'inactive').length;
+  const expiredCount = DEVICE_SEEDS.filter((d) => d.status === 'expired').length;
+
   console.log(`
   📊 Summary:
   ├── 1 Organization : PT Demo Transport
   ├── 2 Users        : admin@demo.com / admin123  |  operator@demo.com / operator123
-  ├── 2 Device Groups: Fleet Jakarta, Fleet Jawa Timur
-  ├── 8 Devices      : 5 online, 2 offline, 1 inactive
-  ├── 8 Positions    : Jakarta (4), Surabaya (2), Tangerang (1), Malang (1)
-  ├── 5 Vehicles
-  ├── 3 Drivers
-  └── 2 Geofences
+  ├── 5 Device Groups: Jakarta, Jawa Timur, Bandung, Bali, Sumatera Utara
+  ├── ${DEVICE_SEEDS.length} Devices     : ${onlineCount} online, ${offlineCount} offline, ${inactiveCount} inactive, ${expiredCount} expired
+  ├── ${DEVICE_SEEDS.length} Positions   : Jakarta, Surabaya, Bandung, Bali, Medan
+  ├── ${DEVICE_SEEDS.length} Vehicles
+  ├── 20 Drivers
+  └── 8 Geofences
   `);
 
   await client.end();

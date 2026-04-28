@@ -10,11 +10,11 @@ interface Props {
 
 type StatusFilter = 'all' | 'online' | 'offline';
 
-const STATUS_BADGE: Record<DeviceStatus, string> = {
-  online: 'bg-green-500',
-  offline: 'bg-gray-400',
-  inactive: 'bg-yellow-500',
-  expired: 'bg-red-500',
+const STATUS_CLASS: Record<DeviceStatus, string> = {
+  online: 'device-panel__badge--online',
+  offline: 'device-panel__badge--offline',
+  inactive: 'device-panel__badge--inactive',
+  expired: 'device-panel__badge--expired',
 };
 
 export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
@@ -106,7 +106,8 @@ export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
             >
               <div className="device-panel__item-header">
                 <span className="device-panel__item-name">{device.name}</span>
-                <span className={`device-panel__badge ${STATUS_BADGE[device.status]}`}>
+                <span className={`device-panel__badge ${STATUS_CLASS[device.status]}`}>
+                  <span className={`device-panel__badge-dot device-panel__badge-dot--${device.status}`} />
                   {device.status}
                 </span>
               </div>
