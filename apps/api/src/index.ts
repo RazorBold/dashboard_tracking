@@ -23,9 +23,14 @@ app.use(
 app.use(compression());
 
 // ─── CORS ─────────────────────────────────────────────
+const corsOrigin =
+  env.NODE_ENV === 'development'
+    ? (_origin: string | undefined, cb: (e: Error | null, ok?: boolean) => void) => cb(null, true)
+    : env.CORS_ORIGIN;
+
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
