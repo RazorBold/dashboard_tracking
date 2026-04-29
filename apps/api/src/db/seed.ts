@@ -307,7 +307,91 @@ async function seed() {
     { name: 'Depot Medan',           type: 'circle', geometry: { center: { lat: 3.5952,  lng: 98.6722  }, radius: 350 }, organizationId: org.id, description: 'Depot Medan kota' },
   ]);
 
-  // ─── 9. Alerts (50) ─────────────────────────────────
+  // ─── 9. Position History (for Tracks playback) ──────
+  console.log('  🗺️  Creating position history tracks...');
+
+  // 5 Jakarta online devices get full 24h route history
+  const trackDevices = insertedDevices.slice(0, 5); // First 5 = Jakarta online fleet
+
+  // Route waypoints for each device (lat, lng deltas from Jakarta center)
+  const ROUTES: Array<Array<[number, number]>> = [
+    // Route 0: Kebayoran → Monas → Kemayoran → Kelapa Gading (car, busy city)
+    [[-6.2394,106.7983],[-6.2200,106.8100],[-6.2088,106.8456],[-6.1900,106.8600],[-6.1850,106.8800],[-6.1900,106.9100],[-6.2000,106.9300]],
+    // Route 1: Pulogadung → PIK → Pluit → Pantai Indah (truck, north Jakarta)
+    [[-6.1901,106.9002],[-6.1200,106.8000],[-6.1050,106.7800],[-6.1100,106.7500],[-6.1200,106.7200],[-6.1500,106.7000]],
+    // Route 2: Bekasi → Cawang → Pancoran → Pondok Indah (van, east-south)
+    [[-6.2350,106.9900],[-6.2400,106.9200],[-6.2500,106.8700],[-6.2600,106.8200],[-6.2700,106.7900],[-6.2900,106.7700]],
+    // Route 3: Thamrin → Semanggi → TB Simatupang → Lebak Bulus (car, south)
+    [[-6.1900,106.8200],[-6.2100,106.8100],[-6.2400,106.8100],[-6.2700,106.8050],[-6.2900,106.7850],[-6.3100,106.7750]],
+    // Route 4: Grogol → Tomang → Slipi → Kemanggisan (car, west corridor)
+    [[-6.1650,106.7900],[-6.1800,106.7950],[-6.1900,106.8000],[-6.2000,106.7950],[-6.2050,106.7850],[-6.2100,106.7700]],
+  ];
+
+  const now24h = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24h ago
+
+  for (let di = 0; di < trackDevices.length; di++) {
+    const dev = trackDevices[di];
+    const route = ROUTES[di % ROUTES.length];
+    const totalPoints = 80;
+    const intervalMs = (24 * 60 * 60 * 1000) / totalPoints; // ~18 min between points
+
+    // Simulate: drive first half, stop at midpoint for 4h, drive second half
+    const stopStart = Math.floor(totalPoints * 0.35);
+    const stopEnd = Math.floor(totalPoints * 0.55);
+
+    const posValues: Array<{
+      deviceId: string; latitude: number; longitude: number;
+      speed: number; heading: number; altitude: number;
+      satellites: number; gsmSignal: number; batteryVoltage: number;
+      accStatus: number; mileage: number; timestamp: Date;
+    }> = [];
+
+    let segIdx = 0;
+    let mileage = 5000 + di * 15000;
+
+    for (let pi = 0; pi < totalPoints; pi++) {
+      const ts = new Date(now24h.getTime() + pi * intervalMs);
+      const isStopped = pi >= stopStart && pi <= stopEnd;
+
+      // Progress along route segments
+      const progress = pi / (totalPoints - 1);
+      segIdx = Math.min(Math.floor(progress * (route.length - 1)), route.length - 2);
+      const segProgress = (progress * (route.length - 1)) - segIdx;
+
+      const [lat1, lng1] = route[segIdx];
+      const [lat2, lng2] = route[segIdx + 1];
+      const baseLat = lat1 + (lat2 - lat1) * segProgress;
+      const baseLng = lng1 + (lng2 - lng1) * segProgress;
+
+      // Small noise
+      const noiseLat = (Math.random() - 0.5) * 0.0008;
+      const noiseLng = (Math.random() - 0.5) * 0.0008;
+
+      const speed = isStopped ? 0 : 15 + Math.floor(Math.random() * 65);
+      const heading = isStopped ? 0 : Math.floor(Math.random() * 360);
+      if (!isStopped) mileage += speed * (intervalMs / 3600000);
+
+      posValues.push({
+        deviceId: dev.id,
+        latitude: baseLat + noiseLat,
+        longitude: baseLng + noiseLng,
+        speed,
+        heading,
+        altitude: 5 + Math.floor(Math.random() * 40),
+        satellites: 8 + Math.floor(Math.random() * 6),
+        gsmSignal: 60 + Math.floor(Math.random() * 40),
+        batteryVoltage: 12.0 + Math.random() * 0.8,
+        accStatus: isStopped ? 0 : 1,
+        mileage: Math.floor(mileage),
+        timestamp: ts,
+      });
+    }
+
+    await db.insert(devicePositions).values(posValues);
+    console.log(`     Device ${di + 1}/${trackDevices.length}: ${posValues.length} positions inserted`);
+  }
+
+  // ─── 10. Alerts (50) ─────────────────────────────────
   console.log('  🚨 Creating alerts...');
 
   const ALERT_TEMPLATES: Array<{
@@ -396,7 +480,7 @@ async function seed() {
   ├── 2 Users        : admin@demo.com / admin123  |  operator@demo.com / operator123
   ├── 5 Device Groups: Jakarta, Jawa Timur, Bandung, Bali, Sumatera Utara
   ├── ${DEVICE_SEEDS.length} Devices     : ${onlineCount} online, ${offlineCount} offline, ${inactiveCount} inactive, ${expiredCount} expired
-  ├── ${DEVICE_SEEDS.length} Positions   : Jakarta, Surabaya, Bandung, Bali, Medan
+  ├── ${DEVICE_SEEDS.length} Positions   : Jakarta, Surabaya, Bandung, Bali, Medan (+ 400 history pts)
   ├── ${DEVICE_SEEDS.length} Vehicles
   ├── 20 Drivers
   ├── 8 Geofences
