@@ -10,6 +10,10 @@ import { vehicles } from './schema/vehicles';
 import { drivers } from './schema/drivers';
 import { geofences } from './schema/geofences';
 import { devicePositions } from './schema/device-positions';
+import { alerts } from './schema/alerts';
+
+type AlertType = 'acc_on' | 'acc_off' | 'vibration' | 'overspeed' | 'enter_geofence' | 'exit_geofence' | 'collision' | 'sharp_turn_left' | 'sharp_turn_right' | 'sudden_acceleration' | 'sudden_deceleration' | 'low_battery' | 'sos';
+type AlertSeverity = 'info' | 'warning' | 'critical';
 
 type FleetKey = 'jkt' | 'jtm' | 'bdg' | 'bli' | 'sumut';
 type DeviceStatus = 'online' | 'offline' | 'inactive' | 'expired';
@@ -110,6 +114,7 @@ async function seed() {
   console.log('⚠️  Clearing existing data...');
 
   // Clear in dependency order
+  await db.delete(alerts);
   await db.delete(devicePositions);
   await db.delete(vehicles);
   await db.delete(drivers);
@@ -302,6 +307,83 @@ async function seed() {
     { name: 'Depot Medan',           type: 'circle', geometry: { center: { lat: 3.5952,  lng: 98.6722  }, radius: 350 }, organizationId: org.id, description: 'Depot Medan kota' },
   ]);
 
+  // ─── 9. Alerts (50) ─────────────────────────────────
+  console.log('  🚨 Creating alerts...');
+
+  const ALERT_TEMPLATES: Array<{
+    type: AlertType;
+    severity: AlertSeverity;
+    message: (speed?: number) => string;
+    needsSpeed: boolean;
+  }> = [
+    { type: 'overspeed',            severity: 'warning',  needsSpeed: true,  message: (s) => `Vehicle exceeded speed limit: ${s} km/h (Limit: 80 km/h)` },
+    { type: 'overspeed',            severity: 'critical', needsSpeed: true,  message: (s) => `Severe overspeed: ${s} km/h (Limit: 80 km/h)` },
+    { type: 'acc_on',               severity: 'info',     needsSpeed: false, message: () => 'Engine turned ON' },
+    { type: 'acc_off',              severity: 'info',     needsSpeed: false, message: () => 'Engine turned OFF' },
+    { type: 'vibration',            severity: 'warning',  needsSpeed: false, message: () => 'Vibration detected — possible tampering or collision' },
+    { type: 'collision',            severity: 'critical', needsSpeed: false, message: () => 'Collision detected! Immediate attention required' },
+    { type: 'sharp_turn_left',      severity: 'warning',  needsSpeed: false, message: () => 'Sharp left turn detected' },
+    { type: 'sharp_turn_right',     severity: 'warning',  needsSpeed: false, message: () => 'Sharp right turn detected' },
+    { type: 'sudden_acceleration',  severity: 'warning',  needsSpeed: false, message: () => 'Sudden acceleration detected' },
+    { type: 'sudden_deceleration',  severity: 'warning',  needsSpeed: false, message: () => 'Sudden braking detected' },
+    { type: 'enter_geofence',       severity: 'info',     needsSpeed: false, message: () => 'Vehicle entered geo-fence zone: Pool Cibitung' },
+    { type: 'exit_geofence',        severity: 'info',     needsSpeed: false, message: () => 'Vehicle exited geo-fence zone: Kantor Pusat Jakarta' },
+    { type: 'low_battery',          severity: 'warning',  needsSpeed: false, message: () => 'GPS device battery low: 11.8V' },
+    { type: 'sos',                  severity: 'critical', needsSpeed: false, message: () => 'SOS button pressed! Emergency assistance needed' },
+  ];
+
+  // Only use online/offline devices (that have a valid org & position)
+  const eligibleDevices = insertedDevices.filter((_, i) =>
+    DEVICE_SEEDS[i].status === 'online' || DEVICE_SEEDS[i].status === 'offline'
+  );
+
+  const alertValues: Array<{
+    deviceId: string;
+    organizationId: string;
+    type: AlertType;
+    severity: AlertSeverity;
+    message: string;
+    latitude: number;
+    longitude: number;
+    speed: number | null;
+    isRead: boolean;
+    createdAt: Date;
+  }> = [];
+
+  for (let i = 0; i < 50; i++) {
+    const dev = eligibleDevices[i % eligibleDevices.length];
+    const seedData = DEVICE_SEEDS[insertedDevices.indexOf(dev)];
+    const center = FLEET_CENTERS[seedData.fleet];
+    const tpl = ALERT_TEMPLATES[i % ALERT_TEMPLATES.length];
+    const speed = tpl.needsSpeed ? 85 + Math.floor(Math.random() * 55) : null;
+
+    // Spread timestamps over last 48h — ~40% unread (more visible in UI)
+    const minsAgo = Math.floor(Math.random() * 48 * 60);
+    const createdAt = new Date(now.getTime() - minsAgo * 60 * 1000);
+    const isRead = i % 5 !== 0 && i % 7 !== 0; // ~37% unread
+
+    alertValues.push({
+      deviceId: dev.id,
+      organizationId: org.id,
+      type: tpl.type,
+      severity: tpl.severity,
+      message: tpl.message(speed ?? undefined),
+      latitude: center.lat + jitter(),
+      longitude: center.lng + jitter(),
+      speed,
+      isRead,
+      createdAt,
+    });
+  }
+
+  // Sort by createdAt desc so most recent are first
+  alertValues.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  await db.insert(alerts).values(alertValues);
+
+  const unreadCount = alertValues.filter((a) => !a.isRead).length;
+  console.log(`     ${alertValues.length} alerts inserted (${unreadCount} unread)`);
+
   console.log('\n✅ Seed complete!');
   const onlineCount  = DEVICE_SEEDS.filter((d) => d.status === 'online').length;
   const offlineCount = DEVICE_SEEDS.filter((d) => d.status === 'offline').length;
@@ -317,7 +399,8 @@ async function seed() {
   ├── ${DEVICE_SEEDS.length} Positions   : Jakarta, Surabaya, Bandung, Bali, Medan
   ├── ${DEVICE_SEEDS.length} Vehicles
   ├── 20 Drivers
-  └── 8 Geofences
+  ├── 8 Geofences
+  └── 50 Alerts     : ${alertValues.filter(a => !a.isRead).length} unread, spread over last 48h
   `);
 
   await client.end();
