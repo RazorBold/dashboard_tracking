@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUIStore } from '../../stores/uiStore';
+import { useAlertStore } from '../../stores/alertStore';
 import { sidebarMenus } from '../../config/navigation';
 
 export function LeftSidebar() {
@@ -19,6 +20,7 @@ export function LeftSidebar() {
     setSidebarOpen(false);
   }, [location.pathname, setSidebarOpen]);
 
+  const unreadAlerts = useAlertStore((s) => s.unreadCount);
   const config = sidebarMenus[activeModule];
 
   // Don't render sidebar if module has no items (e.g. Video)
@@ -72,11 +74,14 @@ export function LeftSidebar() {
                 {!sidebarCollapsed && (
                   <span className="left-sidebar__item-label">{item.label}</span>
                 )}
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className={`left-sidebar__item-badge ${sidebarCollapsed ? 'left-sidebar__item-badge--mini' : ''}`}>
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
+                {(() => {
+                  const badge = item.key === 'alerts' ? unreadAlerts : (item.badge ?? 0);
+                  return badge > 0 ? (
+                    <span className={`left-sidebar__item-badge ${sidebarCollapsed ? 'left-sidebar__item-badge--mini' : ''}`}>
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null;
+                })()}
               </NavLink>
             );
           })}

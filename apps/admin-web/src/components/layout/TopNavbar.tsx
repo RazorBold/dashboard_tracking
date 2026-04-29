@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useAlertStore } from '../../stores/alertStore';
 import { topMenuItems } from '../../config/navigation';
 import axiosClient from '../../utils/axiosClient';
 import toast from 'react-hot-toast';
@@ -22,6 +23,7 @@ export function TopNavbar() {
   const logout = useAuthStore((s) => s.logout);
   const { setActiveModule, isMobileMenuOpen, setMobileMenuOpen } = useUIStore();
 
+  const unreadCount = useAlertStore((s) => s.unreadCount);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +126,9 @@ export function TopNavbar() {
           {/* Notification Bell */}
           <button className="top-navbar__icon-btn" id="notification-bell" aria-label="Notifications">
             <Bell size={20} />
-            <span className="top-navbar__badge">0</span>
+            {unreadCount > 0 && (
+              <span className="top-navbar__badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
           </button>
 
           {/* User dropdown */}
