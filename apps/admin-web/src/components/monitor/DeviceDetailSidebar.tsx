@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { 
-  X, Loader2, MapPin, Zap, Activity, Battery, Satellite, Signal, 
+  X, Loader2, MapPin, Activity, Battery, Satellite, Signal,
   Calendar, Car, Hash, User, Phone, Shield, Navigation, Play, 
   Terminal, Settings, Share2 
 } from 'lucide-react';

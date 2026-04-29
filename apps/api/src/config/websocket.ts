@@ -59,3 +59,13 @@ export const broadcastLocation = (location: any) => {
     }
   });
 };
+
+export const broadcastAlert = (alert: any) => {
+  if (!wss) return;
+  const message = JSON.stringify({ type: 'NEW_ALERT', data: alert });
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+};

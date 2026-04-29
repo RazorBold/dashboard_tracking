@@ -17,6 +17,7 @@ export const alertSeverityEnum = pgEnum('alert_severity', ['info', 'warning', 'c
 export const alerts = pgTable('alerts', {
   id: uuid('id').primaryKey().defaultRandom(),
   deviceId: uuid('device_id').notNull(),
+  organizationId: uuid('organization_id'),
   type: alertTypeEnum('type').notNull(),
   severity: alertSeverityEnum('severity').default('warning').notNull(),
   message: text('message'),
