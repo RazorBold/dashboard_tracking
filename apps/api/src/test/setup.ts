@@ -26,3 +26,9 @@ vi.mock('../config/logger', () => ({
     debug: vi.fn(),
   },
 }));
+
+// Mock WebSocket broadcast functions — no real WS server in tests
+vi.mock('../config/websocket', () => ({
+  broadcastLocation: vi.fn(),
+  broadcastAlert: vi.fn(),
+}));

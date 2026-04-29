@@ -5,6 +5,8 @@ import { redisClient } from '../config/redis';
 import { logger } from '../config/logger';
 import { broadcastLocation } from '../config/websocket';
 
+import { detectAlerts } from './alert.service';
+
 export interface LocationPayload {
   lat: number;
   lng: number;
@@ -14,7 +16,7 @@ export interface LocationPayload {
   satellites?: number;
   gsmSignal?: number;
   batteryVoltage?: number;
-  accStatus?: number;
+  accStatus?: number | boolean;
   mileage?: number;
   timestamp: string; // ISO String
 }
@@ -24,6 +26,7 @@ export const processIncomingLocation = async (imei: string, payload: LocationPay
     // 1. Find device by IMEI
     const device = await db.query.devices.findFirst({
       where: eq(devices.imei, imei),
+      with: { vehicle: true },
     });
 
     if (!device) {
@@ -32,6 +35,23 @@ export const processIncomingLocation = async (imei: string, payload: LocationPay
     }
 
     const timestamp = new Date(payload.timestamp);
+
+    // 1.5. Fetch previous position from Redis to detect alerts
+    const previousPositionRaw = await redisClient.get(`device:${device.id}:position`);
+    const previousPosition = previousPositionRaw ? JSON.parse(previousPositionRaw) : null;
+
+    // Call detectAlerts asynchronously (don't await to avoid blocking)
+    detectAlerts(device as any, device.vehicle as any, previousPosition, {
+      lat: payload.lat,
+      lng: payload.lng,
+      speed: payload.speed ?? 0,
+      heading: payload.heading,
+      altitude: payload.altitude,
+      acc: typeof payload.accStatus === 'boolean' ? payload.accStatus : payload.accStatus === 1,
+      timestamp: payload.timestamp,
+    }).catch(err => {
+      logger.error({ err, deviceId: device.id }, 'Alert detection failed');
+    });
 
     // 2. Insert into PostgreSQL
     await db.insert(devicePositions).values({
@@ -44,7 +64,7 @@ export const processIncomingLocation = async (imei: string, payload: LocationPay
       satellites: payload.satellites,
       gsmSignal: payload.gsmSignal,
       batteryVoltage: payload.batteryVoltage,
-      accStatus: payload.accStatus,
+      accStatus: typeof payload.accStatus === 'boolean' ? (payload.accStatus ? 1 : 0) : payload.accStatus,
       mileage: payload.mileage,
       timestamp,
     });
