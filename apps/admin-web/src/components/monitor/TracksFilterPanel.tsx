@@ -38,7 +38,6 @@ export function TracksFilterPanel({
     return !q || d.name.toLowerCase().includes(q) || d.imei.toLowerCase().includes(q);
   });
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!dropdownOpen) return;
     const handler = () => setDropdownOpen(false);
@@ -47,16 +46,19 @@ export function TracksFilterPanel({
   }, [dropdownOpen]);
 
   return (
-    <div className="tracks-filter flex flex-col h-full bg-white border-r border-slate-200">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2 mb-4">
+    <div className="tracks-filter flex flex-col h-full bg-white border-r border-slate-200 overflow-hidden">
+
+      {/* Scrollable top section: inputs */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4">
+
+        {/* Title */}
+        <div className="flex items-center gap-2">
           <Route size={18} className="text-primary-500" />
           <span className="font-semibold text-slate-800 text-sm">Tracks</span>
         </div>
 
         {/* Device Selector */}
-        <div className="mb-3">
+        <div>
           <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Device</label>
           <div className="relative">
             <button
@@ -72,7 +74,7 @@ export function TracksFilterPanel({
             {dropdownOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-hidden flex flex-col"
+                className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-hidden flex flex-col"
               >
                 <div className="p-2 border-b border-slate-100">
                   <div className="relative">
@@ -109,7 +111,7 @@ export function TracksFilterPanel({
         </div>
 
         {/* Date Range */}
-        <div className="mb-3 space-y-2">
+        <div className="space-y-3">
           <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Date Range</label>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
@@ -137,32 +139,34 @@ export function TracksFilterPanel({
           </div>
         </div>
 
-        {/* Search Button */}
+        {/* Trip Summary */}
+        {summary && summary.totalPoints >= 2 && (
+          <div>
+            <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Trip Summary</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <SummaryCard label="Distance"  value={`${summary.totalDistanceKm} km`} />
+              <SummaryCard label="Duration"  value={fmtDuration(summary.durationMinutes)} />
+              <SummaryCard label="Max Speed" value={`${summary.maxSpeedKmh} km/h`} />
+              <SummaryCard label="Avg Speed" value={`${summary.avgSpeedKmh} km/h`} />
+              <SummaryCard label="Stopped"   value={fmtDuration(summary.stoppedMinutes)} />
+              <SummaryCard label="Points"    value={`${summary.totalPoints}`} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky Show Track button — always visible at the bottom */}
+      <div className="flex-shrink-0 px-4 py-3 border-t border-slate-100 bg-white">
         <button
           onClick={onSearch}
           disabled={!selectedDeviceId || !from || !to || trackLoading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
         >
           {trackLoading
-            ? <><RefreshCw size={12} className="animate-spin" /> Loading…</>
-            : <><Route size={12} /> Show Track</>}
+            ? <><RefreshCw size={14} className="animate-spin" /> Loading…</>
+            : <><Route size={14} /> Show Track</>}
         </button>
       </div>
-
-      {/* Trip Summary */}
-      {summary && (
-        <div className="px-4 py-3 border-b border-slate-100">
-          <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Trip Summary</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <SummaryCard label="Distance" value={`${summary.totalDistanceKm} km`} />
-            <SummaryCard label="Duration" value={fmtDuration(summary.durationMinutes)} />
-            <SummaryCard label="Max Speed" value={`${summary.maxSpeedKmh} km/h`} />
-            <SummaryCard label="Avg Speed" value={`${summary.avgSpeedKmh} km/h`} />
-            <SummaryCard label="Stopped" value={fmtDuration(summary.stoppedMinutes)} />
-            <SummaryCard label="Points" value={`${summary.totalPoints}`} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

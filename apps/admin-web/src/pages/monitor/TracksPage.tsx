@@ -107,10 +107,10 @@ export function MonitorTracksPage() {
       <main className="flex-1 relative overflow-hidden">
         <TrackMapView
           positions={positions}
-          playbackIndex={positions.length > 0 ? playbackIndex : null}
+          playbackIndex={positions.length >= 2 ? playbackIndex : null}
         />
 
-        {positions.length > 0 && (
+        {positions.length >= 2 && (
           <PlaybackControls
             positions={positions}
             currentIndex={playbackIndex}
@@ -126,13 +126,19 @@ export function MonitorTracksPage() {
           />
         )}
 
-        {/* Empty state overlay */}
-        {!trackLoading && positions.length === 0 && queryParams.deviceId && (
+        {/* Empty / insufficient data overlay */}
+        {!trackLoading && positions.length < 2 && queryParams.deviceId && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-white/90 rounded-2xl px-8 py-6 text-center shadow-xl border border-slate-200">
-              <div className="text-4xl mb-3">🗺️</div>
-              <p className="font-semibold text-slate-700 text-sm">No track data found</p>
-              <p className="text-xs text-slate-400 mt-1">Try a different date range</p>
+            <div className="bg-white/90 rounded-2xl px-8 py-6 text-center shadow-xl border border-slate-200 max-w-xs">
+              <div className="text-4xl mb-3">{positions.length === 0 ? '🗺️' : '📍'}</div>
+              <p className="font-semibold text-slate-700 text-sm">
+                {positions.length === 0 ? 'No track data found' : 'Not enough data to play track'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {positions.length === 0
+                  ? 'Try a different date range, or run pnpm db:seed to load history data'
+                  : `Only ${positions.length} position found — need at least 2 to draw a route`}
+              </p>
             </div>
           </div>
         )}
