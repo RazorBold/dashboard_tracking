@@ -87,7 +87,7 @@ export function MonitorTracksPage() {
   return (
     <div className="flex h-full min-h-0 overflow-hidden" style={{ margin: '-24px' }}>
       {/* Left panel — filter + summary */}
-      <aside className="w-72 flex-shrink-0 flex flex-col h-full overflow-y-auto">
+      <aside className="w-72 flex-shrink-0 flex flex-col overflow-hidden">
         <TracksFilterPanel
           devices={devices}
           isLoading={devicesLoading}

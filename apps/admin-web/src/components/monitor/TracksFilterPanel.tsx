@@ -46,7 +46,7 @@ export function TracksFilterPanel({
   }, [dropdownOpen]);
 
   return (
-    <div className="tracks-filter flex flex-col h-full bg-white border-r border-slate-200 overflow-hidden">
+    <div className="tracks-filter flex flex-col flex-1 bg-white border-r border-slate-200 overflow-hidden">
 
       {/* Scrollable top section: inputs */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4">
