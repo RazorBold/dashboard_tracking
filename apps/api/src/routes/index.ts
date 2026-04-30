@@ -8,6 +8,7 @@ import { usersRouter } from './users.routes';
 import { driverRouter } from './driver.routes';
 import { reportTemplatesRouter } from './report-templates.routes';
 import { autoReportsRouter } from './auto-reports.routes';
+import { geofenceRouter } from './geofence.routes';
 
 export const apiRouter = Router();
 
@@ -21,6 +22,7 @@ apiRouter.use('/users', usersRouter);
 apiRouter.use('/drivers', driverRouter);
 apiRouter.use('/report-templates', reportTemplatesRouter);
 apiRouter.use('/auto-reports', autoReportsRouter);
+apiRouter.use('/geofences', geofenceRouter);
 
 // Health check
 apiRouter.get('/health', (_req, res) => {
