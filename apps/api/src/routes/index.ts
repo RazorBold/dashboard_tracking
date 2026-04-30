@@ -5,6 +5,7 @@ import { vehicleRouter } from './vehicle.routes';
 import { deviceGroupRouter } from './device-group.routes';
 import alertRouter from './alert.routes';
 import { usersRouter } from './users.routes';
+import { driverRouter } from './driver.routes';
 
 export const apiRouter = Router();
 
@@ -15,6 +16,7 @@ apiRouter.use('/vehicles', vehicleRouter);
 apiRouter.use('/device-groups', deviceGroupRouter);
 apiRouter.use('/alerts', alertRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/drivers', driverRouter);
 
 // Health check
 apiRouter.get('/health', (_req, res) => {
