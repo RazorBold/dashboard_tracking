@@ -6,6 +6,8 @@ import { deviceGroupRouter } from './device-group.routes';
 import alertRouter from './alert.routes';
 import { usersRouter } from './users.routes';
 import { driverRouter } from './driver.routes';
+import { reportTemplatesRouter } from './report-templates.routes';
+import { autoReportsRouter } from './auto-reports.routes';
 
 export const apiRouter = Router();
 
@@ -17,6 +19,8 @@ apiRouter.use('/device-groups', deviceGroupRouter);
 apiRouter.use('/alerts', alertRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/drivers', driverRouter);
+apiRouter.use('/report-templates', reportTemplatesRouter);
+apiRouter.use('/auto-reports', autoReportsRouter);
 
 // Health check
 apiRouter.get('/health', (_req, res) => {
