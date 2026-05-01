@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { 
+import {
   X, Loader2, MapPin, Activity, Battery, Satellite, Signal,
-  Calendar, Car, Hash, User, Phone, Shield, Navigation, Play, 
-  Terminal, Settings, Share2 
+  Calendar, Car, Hash, User, Phone, Shield, Navigation, Play,
+  Terminal, Settings, Share2
 } from 'lucide-react';
 import type { Device, DeviceStatus } from '../../types/device';
+import { DeviceCommandPanel } from './DeviceCommandPanel';
 
 interface Props {
   device: Device | undefined;
@@ -256,7 +257,11 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
           </div>
         )}
 
-        {(['tracks', 'command', 'configure', 'share'] as Tab[]).includes(activeTab) && (
+        {activeTab === 'command' && (
+          <DeviceCommandPanel deviceId={device.id} />
+        )}
+
+        {(['tracks', 'configure', 'share'] as Tab[]).includes(activeTab) && (
           <div className="detail-sidebar__placeholder">
             <div className="detail-sidebar__placeholder-icon">
               {TABS.find(t => t.id === activeTab)?.icon}
