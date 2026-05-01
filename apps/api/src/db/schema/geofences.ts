@@ -13,6 +13,7 @@ export const geofences = pgTable('geofences', {
   geometry: jsonb('geometry').notNull(),
   organizationId: uuid('organization_id'),
   description: text('description'),
+  assignedDeviceIds: jsonb('assigned_device_ids').$type<string[]>().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,0 +1,95 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { verifyToken } from '../middleware/auth.middleware';
+import * as reportService from '../services/report.service';
+
+const router = Router();
+router.use(verifyToken);
+
+const createSchema = z.object({
+  name: z.string().min(1).max(100),
+  reportType: z.enum(['daily_activity', 'track_details']),
+  deviceId: z.string().uuid().optional().nullable(),
+  frequency: z.enum(['daily', 'weekly', 'monthly']),
+  executionTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM'),
+  email: z.string().email(),
+});
+
+// ─── List ─────────────────────────────────────────────
+router.get('/', async (req, res) => {
+  try {
+    const orgId = req.user?.orgId;
+    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+
+    const list = await reportService.listAutoReports(orgId);
+    res.json({ data: list });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list auto reports' });
+  }
+});
+
+// ─── Create ───────────────────────────────────────────
+router.post('/', async (req, res) => {
+  try {
+    const orgId = req.user?.orgId;
+    const userId = req.user?.sub;
+    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+
+    const parsed = createSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const { name, reportType, deviceId, frequency, executionTime, email } = parsed.data;
+    const report = await reportService.createAutoReport({
+      organizationId: orgId,
+      userId: userId ?? null,
+      name,
+      reportType,
+      deviceId: deviceId ?? null,
+      frequency,
+      executionTime,
+      email,
+      isActive: true,
+      lastRunAt: null,
+    });
+
+    res.status(201).json({ data: report });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create auto report' });
+  }
+});
+
+// ─── Toggle isActive ──────────────────────────────────
+router.patch('/:id', async (req, res) => {
+  try {
+    const orgId = req.user?.orgId;
+    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+
+    const updated = await reportService.toggleAutoReport(req.params.id, orgId);
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+
+    res.json({ data: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to toggle auto report' });
+  }
+});
+
+// ─── Delete ───────────────────────────────────────────
+router.delete('/:id', async (req, res) => {
+  try {
+    const orgId = req.user?.orgId;
+    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+
+    const deleted = await reportService.deleteAutoReport(req.params.id, orgId);
+    if (!deleted) return res.status(404).json({ error: 'Not found' });
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete auto report' });
+  }
+});
+
+export { router as autoReportsRouter };

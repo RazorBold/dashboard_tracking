@@ -4,6 +4,7 @@ import {
   Cpu,
   Video,
   Truck,
+  Shield,
   // Monitor sub-menu
   LayoutGrid,
   AlertTriangle,
@@ -37,6 +38,7 @@ export const topMenuItems: TopMenuItem[] = [
   { key: 'device', label: 'Device', icon: Cpu, path: '/device' },
   { key: 'video', label: 'Video', icon: Video, path: '/video' },
   { key: 'fleet', label: 'Fleet', icon: Truck, path: '/fleet' },
+  { key: 'geofence', label: 'Geo-fence', icon: Shield, path: '/geofence' },
 ];
 
 // ─── Sidebar Menu Items (per Module) ──────────────────
@@ -90,6 +92,12 @@ export const sidebarMenus: Record<string, SidebarConfig> = {
       { key: 'vehicle', label: 'Vehicle', icon: Car, path: '/fleet/vehicle' },
       { key: 'check-in', label: 'Check-in', icon: MapPin, path: '/fleet/check-in' },
       { key: 'route-plan', label: 'Route Planning', icon: Navigation, path: '/fleet/route-plan' },
+    ],
+  },
+  geofence: {
+    title: 'Geo-fence',
+    items: [
+      { key: 'geofences', label: 'Geofences', icon: Shield, path: '/geofence' },
     ],
   },
 };

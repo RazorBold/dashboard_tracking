@@ -50,6 +50,9 @@ import {
 // Settings
 import { SettingsPage } from './pages/settings/SettingsPage';
 
+// Geofence pages
+import { GeofencePage } from './pages/geofence';
+
 function App() {
   const hydrate = useAuthStore((state) => state.hydrate);
 
@@ -104,6 +107,9 @@ function App() {
 
             {/* Settings */}
             <Route path="/settings" element={<SettingsPage />} />
+
+            {/* Geo-fence */}
+            <Route path="/geofence" element={<GeofencePage />} />
 
             {/* Dashboard redirect (backward compat) */}
             <Route path="/dashboard" element={<Navigate to="/monitor/objects" replace />} />
