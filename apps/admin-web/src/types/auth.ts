@@ -2,8 +2,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'manager' | 'operator';
-  avatar?: string;
+  role: 'super_admin' | 'admin' | 'operator' | 'viewer';
+  avatar?: string | null;
+  organizationId?: string | null;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

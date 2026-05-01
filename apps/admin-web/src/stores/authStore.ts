@@ -14,6 +14,7 @@ interface AuthStore {
   setToken: (token: string | null) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  updateUser: (partial: Partial<User>) => void;
   logout: () => void;
   hydrate: () => void;
 }
@@ -43,6 +44,11 @@ export const useAuthStore = create<AuthStore>()(
       setIsLoading: (loading) => set({ isLoading: loading }),
 
       setError: (error) => set({ error }),
+
+      updateUser: (partial) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partial } : state.user,
+        })),
 
       logout: () => {
         set({

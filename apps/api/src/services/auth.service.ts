@@ -206,3 +206,26 @@ export const getMe = async (userId: string) => {
 
   return sanitizeUser(user);
 };
+
+// ─── Update Me (self-service profile) ────────────────
+export const updateMe = async (
+  userId: string,
+  input: { name?: string; currentPassword?: string; newPassword?: string },
+) => {
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!user) throw new AppError(404, 'User not found');
+
+  const updates: Partial<User> = { updatedAt: new Date() };
+
+  if (input.name) updates.name = input.name;
+
+  if (input.newPassword) {
+    if (!input.currentPassword) throw new AppError(400, 'Current password is required');
+    const match = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!match) throw new AppError(400, 'Current password is incorrect');
+    updates.passwordHash = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
+  }
+
+  const [updated] = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
+  return sanitizeUser(updated);
+};

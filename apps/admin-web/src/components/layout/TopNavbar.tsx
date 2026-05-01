@@ -158,7 +158,7 @@ export function TopNavbar() {
                   className="top-navbar__dropdown-item"
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    // TODO: navigate to profile
+                    navigate('/settings');
                   }}
                   id="dropdown-profile"
                 >
@@ -169,7 +169,7 @@ export function TopNavbar() {
                   className="top-navbar__dropdown-item"
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    // TODO: navigate to settings
+                    navigate('/settings');
                   }}
                   id="dropdown-settings"
                 >
