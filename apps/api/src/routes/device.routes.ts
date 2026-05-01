@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validate, verifyToken } from '../middleware';
 import * as deviceService from '../services/device.service';
 import * as trackingService from '../services/tracking.service';
+import * as commandService from '../services/command.service';
 
 export const deviceRouter: IRouter = Router();
 deviceRouter.use(verifyToken);
@@ -34,6 +35,14 @@ const listQuerySchema = z.object({
 const positionHistoryQuerySchema = z.object({
   from: z.string().datetime(),
   to: z.string().datetime(),
+});
+
+const sendCommandSchema = z.object({
+  type: z.enum(['restart', 'set_interval', 'set_apn']),
+  parameters: z.object({
+    seconds: z.number().int().min(10).max(3600).optional(),
+    apn: z.string().min(1).max(100).optional(),
+  }).optional(),
 });
 
 // ─── Routes ───────────────────────────────────────────
@@ -340,6 +349,39 @@ deviceRouter.get(
         new Date(to)
       );
       res.json({ success: true, data: positions });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── Device Commands ──────────────────────────────────
+
+deviceRouter.post(
+  '/:id/commands',
+  validate(sendCommandSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const device = await deviceService.getDeviceById(req.params.id as string);
+      if (!device) {
+        res.status(404).json({ success: false, message: 'Device not found' });
+        return;
+      }
+      const { type, parameters } = req.body as { type: commandService.CommandType; parameters?: commandService.CommandParameters };
+      const command = await commandService.sendCommand(device.id, device.imei, type, parameters);
+      res.status(201).json({ success: true, data: command });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+deviceRouter.get(
+  '/:id/commands',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const history = await commandService.getCommandHistory(req.params.id as string);
+      res.json({ success: true, data: history });
     } catch (err) {
       next(err);
     }

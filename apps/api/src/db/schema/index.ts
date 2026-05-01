@@ -9,4 +9,5 @@ export * from './refresh-tokens';
 export * from './device-positions';
 export * from './alerts';
 export * from './geofences';
+export * from './device-commands';
 export * from './relations';
