@@ -10,6 +10,7 @@ export interface ListDevicesParams {
   search?: string;
   status?: Device['status'];
   groupId?: string;
+  orgId?: string | null;
 }
 
 export interface PaginatedResult<T> {
@@ -18,10 +19,11 @@ export interface PaginatedResult<T> {
 }
 
 export async function listDevices(params: ListDevicesParams): Promise<PaginatedResult<Device>> {
-  const { page, limit, search, status, groupId } = params;
+  const { page, limit, search, status, groupId, orgId } = params;
   const offset = (page - 1) * limit;
 
   const conditions: ReturnType<typeof eq>[] = [];
+  if (orgId) conditions.push(eq(devices.organizationId, orgId));
   if (status) conditions.push(eq(devices.status, status));
   if (groupId) conditions.push(eq(devices.groupId, groupId));
   if (search) {

@@ -9,6 +9,7 @@ export interface ListVehiclesParams {
   limit: number;
   search?: string;
   status?: Vehicle['status'];
+  orgId?: string | null;
 }
 
 export interface PaginatedResult<T> {
@@ -17,10 +18,11 @@ export interface PaginatedResult<T> {
 }
 
 export async function listVehicles(params: ListVehiclesParams): Promise<PaginatedResult<Vehicle>> {
-  const { page, limit, search, status } = params;
+  const { page, limit, search, status, orgId } = params;
   const offset = (page - 1) * limit;
 
   const conditions: ReturnType<typeof eq>[] = [];
+  if (orgId) conditions.push(eq(vehicles.organizationId, orgId));
   if (status) conditions.push(eq(vehicles.status, status));
   if (search) {
     conditions.push(
