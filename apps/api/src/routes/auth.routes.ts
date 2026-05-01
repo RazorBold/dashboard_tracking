@@ -335,3 +335,26 @@ authRouter.get(
     }
   },
 );
+
+const updateMeSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(8).optional(),
+}).refine(
+  (d) => !d.newPassword || !!d.currentPassword,
+  { message: 'Current password is required when changing password', path: ['currentPassword'] },
+);
+
+authRouter.patch(
+  '/me',
+  verifyToken,
+  validate(updateMeSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await authService.updateMe(req.user!.sub, req.body);
+      res.json({ success: true, message: 'Profile updated', data: user });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

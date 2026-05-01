@@ -47,6 +47,9 @@ import {
   RoutePlanPage,
 } from './pages/fleet';
 
+// Settings
+import { SettingsPage } from './pages/settings/SettingsPage';
+
 function App() {
   const hydrate = useAuthStore((state) => state.hydrate);
 
@@ -98,6 +101,9 @@ function App() {
             <Route path="/fleet/check-in" element={<CheckInPage />} />
             <Route path="/fleet/route-plan" element={<RoutePlanPage />} />
             <Route path="/fleet" element={<Navigate to="/fleet/dashboard" replace />} />
+
+            {/* Settings */}
+            <Route path="/settings" element={<SettingsPage />} />
 
             {/* Dashboard redirect (backward compat) */}
             <Route path="/dashboard" element={<Navigate to="/monitor/objects" replace />} />
