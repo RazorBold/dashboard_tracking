@@ -79,7 +79,8 @@ vehicleRouter.get(
   validate(listQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await vehicleService.listVehicles(req.query as any);
+      const orgId = req.user?.role === 'super_admin' ? undefined : req.user?.orgId;
+      const result = await vehicleService.listVehicles({ ...(req.query as any), orgId });
       res.json({ success: true, ...result });
     } catch (err) {
       next(err);

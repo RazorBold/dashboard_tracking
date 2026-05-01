@@ -81,7 +81,8 @@ deviceRouter.get(
   validate(listQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await deviceService.listDevices(req.query as any);
+      const orgId = req.user?.role === 'super_admin' ? undefined : req.user?.orgId;
+      const result = await deviceService.listDevices({ ...(req.query as any), orgId });
 
       // Enrich each device with its latest GPS position
       const deviceIds = result.data.map((d) => d.id);
