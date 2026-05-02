@@ -74,9 +74,16 @@ function makeAlertIcon(
 function FlyToAlert({ alert }: { alert: Alert | undefined }) {
   const map = useMap();
   useEffect(() => {
-    if (alert?.latitude != null && alert?.longitude != null) {
-      map.setView([alert.latitude, alert.longitude], 15, { animate: true, duration: 0.8 });
-    }
+    if (alert?.latitude == null || alert?.longitude == null) return;
+    const target: [number, number] = [alert.latitude, alert.longitude];
+    const currentZoom = map.getZoom();
+    const targetZoom = currentZoom >= 15 ? currentZoom : 15;
+
+    map.flyTo(target, targetZoom, {
+      animate: true,
+      duration: 1.4,
+      easeLinearity: 0.25,
+    });
   }, [alert, map]);
   return null;
 }
