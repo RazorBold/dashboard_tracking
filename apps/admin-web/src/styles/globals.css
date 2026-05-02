@@ -1771,32 +1771,36 @@ button, input, textarea, select {
 /* ═══════════════════════════════════════════════════════
    Device Management Page
    ═══════════════════════════════════════════════════════ */
+/* ── Device Page layout ───────────────────────────────── */
 .device-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-  flex: 1;
+  height: 100%;
+  min-height: 0;
+  gap: 16px;
+  overflow: hidden;           /* page itself clips; table scrolls */
 }
 
 .device-page__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .device-page__title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--slate-800);
   margin: 0;
+  letter-spacing: -0.3px;
 }
 
 .device-page__subtitle {
   font-size: 13px;
-  color: var(--slate-500);
-  margin: 4px 0 0;
+  color: var(--slate-400);
+  margin: 3px 0 0;
 }
 
 .device-page__actions {
@@ -1808,15 +1812,16 @@ button, input, textarea, select {
 .device-page__toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .device-page__search {
   position: relative;
   flex: 1;
   min-width: 200px;
-  max-width: 360px;
+  max-width: 380px;
 }
 
 .device-page__search-icon {
@@ -1830,48 +1835,46 @@ button, input, textarea, select {
 
 .device-page__search-input {
   width: 100%;
-  padding: 8px 12px 8px 32px;
+  padding: 8px 12px 8px 34px;
   background: white;
-  border: 1px solid var(--slate-200);
+  border: 1.5px solid var(--slate-200);
   border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--slate-700);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .device-page__search-input:focus {
   border-color: var(--primary-400);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
 }
-.device-page__search-input::placeholder {
-  color: var(--slate-400);
-}
+.device-page__search-input::placeholder { color: var(--slate-400); }
 
 .device-page__tabs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   background: var(--slate-100);
   border-radius: var(--radius-md);
-  padding: 4px;
+  padding: 3px;
 }
 
 .device-page__tab {
   padding: 5px 14px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: calc(var(--radius-md) - 2px);
   background: transparent;
   color: var(--slate-500);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
-.device-page__tab:hover {
-  color: var(--slate-700);
-}
+.device-page__tab:hover { color: var(--slate-700); }
 .device-page__tab--active {
   background: white;
   color: var(--slate-800);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   font-weight: 600;
 }
 
@@ -1887,12 +1890,23 @@ button, input, textarea, select {
 
 /* ── Device Table ─────────────────────────────────────── */
 .device-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;            /* ← THIS is what enables scroll */
   background: white;
-  border: 1px solid var(--slate-200);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--slate-200);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
 }
+
+/* custom scrollbar */
+.device-table-wrapper::-webkit-scrollbar { width: 6px; }
+.device-table-wrapper::-webkit-scrollbar-track { background: transparent; }
+.device-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--slate-200);
+  border-radius: 99px;
+}
+.device-table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--slate-300); }
 
 .device-table {
   width: 100%;
@@ -1901,118 +1915,137 @@ button, input, textarea, select {
 }
 
 .device-table thead th {
-  padding: 11px 16px;
+  padding: 11px 18px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--slate-500);
+  letter-spacing: 0.07em;
+  color: var(--slate-400);
   background: var(--slate-50);
-  border-bottom: 1px solid var(--slate-200);
+  border-bottom: 1.5px solid var(--slate-200);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .device-table tbody td {
-  padding: 12px 16px;
+  padding: 13px 18px;
   color: var(--slate-700);
   border-bottom: 1px solid var(--slate-100);
+  vertical-align: middle;
 }
 
-.device-table__row:last-child td {
-  border-bottom: none;
-}
+.device-table__row:last-child td { border-bottom: none; }
 
+.device-table__row {
+  transition: background 0.1s;
+}
 .device-table__row:hover td {
-  background: var(--slate-50);
+  background: #f8faff;
 }
+.device-table__row:hover .device-table__actions { opacity: 1; }
 
 .device-table__name {
   font-weight: 600;
   color: var(--slate-800) !important;
 }
-
-.device-table__imei {
+.device-table__name small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--slate-400) !important;
   font-family: monospace;
-  font-size: 12px;
+  margin-top: 1px;
+}
+
+.device-table__model {
   color: var(--slate-500) !important;
+  font-size: 12.5px;
 }
 
 .device-table__actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
 }
 
 .device-table__btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  border: 1.5px solid transparent;
+  border-radius: 7px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .device-table__btn--edit {
   background: var(--slate-100);
   color: var(--slate-600);
+  border-color: var(--slate-200);
 }
 .device-table__btn--edit:hover {
-  background: var(--primary-50);
-  color: var(--primary-700);
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
 }
 
 .device-table__btn--delete {
   background: var(--slate-100);
-  color: var(--slate-600);
+  color: var(--slate-500);
+  border-color: var(--slate-200);
 }
 .device-table__btn--delete:hover {
-  background: #fee2e2;
+  background: #fef2f2;
   color: #dc2626;
+  border-color: #fecaca;
 }
 
 .device-table__empty {
-  padding: 48px;
+  padding: 64px 48px;
   text-align: center;
   color: var(--slate-400);
   font-size: 14px;
   background: white;
-  border: 1px solid var(--slate-200);
-  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--slate-200);
+  border-radius: 12px;
 }
 
 /* ── Device Status Badge ──────────────────────────────── */
 .device-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 10px;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
 }
-
-.device-badge--green {
-  background: #dcfce7;
-  color: #15803d;
+.device-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.device-badge--gray {
-  background: var(--slate-100);
-  color: var(--slate-600);
-}
+.device-badge--green  { background: #dcfce7; color: #15803d; }
+.device-badge--green::before  { background: #16a34a; }
 
-.device-badge--yellow {
-  background: #fef9c3;
-  color: #a16207;
-}
+.device-badge--gray   { background: var(--slate-100); color: var(--slate-600); }
+.device-badge--gray::before   { background: var(--slate-400); }
 
-.device-badge--red {
-  background: #fee2e2;
-  color: #dc2626;
-}
+.device-badge--yellow { background: #fef9c3; color: #a16207; }
+.device-badge--yellow::before { background: #ca8a04; }
+
+.device-badge--red    { background: #fee2e2; color: #dc2626; }
+.device-badge--red::before    { background: #dc2626; }
 
 /* ── Buttons (shared) ─────────────────────────────────── */
 .btn {
