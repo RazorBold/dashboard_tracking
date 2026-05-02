@@ -6,6 +6,116 @@ import * as geofenceService from '../services/geofence.service';
 const router = Router();
 router.use(verifyToken);
 
+/**
+ * @swagger
+ * tags:
+ *   name: Geofences
+ *   description: Geo-fence zone management
+ */
+
+/**
+ * @swagger
+ * /api/geofences:
+ *   get:
+ *     summary: List all geofences for the organization
+ *     tags: [Geofences]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of geofence objects
+ */
+
+/**
+ * @swagger
+ * /api/geofences:
+ *   post:
+ *     summary: Create a new geofence
+ *     tags: [Geofences]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, type, geometry]
+ *             properties:
+ *               name: { type: string }
+ *               type: { type: string, enum: [circle, polygon] }
+ *               description: { type: string }
+ *               assignedDeviceIds:
+ *                 type: array
+ *                 items: { type: string, format: uuid }
+ *               geometry:
+ *                 oneOf:
+ *                   - type: object
+ *                     description: Circle geometry
+ *                     properties:
+ *                       center:
+ *                         type: object
+ *                         properties:
+ *                           lat: { type: number }
+ *                           lng: { type: number }
+ *                       radius: { type: number }
+ *                   - type: object
+ *                     description: Polygon geometry
+ *                     properties:
+ *                       points:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             lat: { type: number }
+ *                             lng: { type: number }
+ *     responses:
+ *       201:
+ *         description: Geofence created
+ *       400:
+ *         description: Validation error
+ */
+
+/**
+ * @swagger
+ * /api/geofences/{id}:
+ *   put:
+ *     summary: Update a geofence
+ *     tags: [Geofences]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Geofence updated
+ *       404:
+ *         description: Geofence not found
+ */
+
+/**
+ * @swagger
+ * /api/geofences/{id}:
+ *   delete:
+ *     summary: Delete a geofence
+ *     tags: [Geofences]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204:
+ *         description: Geofence deleted
+ *       404:
+ *         description: Geofence not found
+ */
+
 const pointSchema = z.object({ lat: z.number(), lng: z.number() });
 
 const geometrySchema = z.union([

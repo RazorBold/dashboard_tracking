@@ -6,6 +6,95 @@ import * as reportService from '../services/report.service';
 const router = Router();
 router.use(verifyToken);
 
+/**
+ * @swagger
+ * tags:
+ *   name: AutoReports
+ *   description: Scheduled automatic report delivery
+ */
+
+/**
+ * @swagger
+ * /api/auto-reports:
+ *   get:
+ *     summary: List all auto-report schedules for the organization
+ *     tags: [AutoReports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of auto-report objects
+ */
+
+/**
+ * @swagger
+ * /api/auto-reports:
+ *   post:
+ *     summary: Create a new auto-report schedule
+ *     tags: [AutoReports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, reportType, frequency, executionTime, email]
+ *             properties:
+ *               name: { type: string }
+ *               reportType: { type: string, enum: [daily_activity, track_details] }
+ *               deviceId: { type: string, format: uuid }
+ *               frequency: { type: string, enum: [daily, weekly, monthly] }
+ *               executionTime: { type: string, description: 'HH:MM format', example: '08:00' }
+ *               email: { type: string, format: email }
+ *     responses:
+ *       201:
+ *         description: Auto-report schedule created
+ *       400:
+ *         description: Validation error
+ */
+
+/**
+ * @swagger
+ * /api/auto-reports/{id}:
+ *   patch:
+ *     summary: Toggle active/inactive status of an auto-report
+ *     tags: [AutoReports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Updated auto-report
+ *       404:
+ *         description: Auto-report not found
+ */
+
+/**
+ * @swagger
+ * /api/auto-reports/{id}:
+ *   delete:
+ *     summary: Delete an auto-report schedule
+ *     tags: [AutoReports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204:
+ *         description: Auto-report deleted
+ *       404:
+ *         description: Auto-report not found
+ */
+
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   reportType: z.enum(['daily_activity', 'track_details']),
