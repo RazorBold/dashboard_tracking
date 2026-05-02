@@ -2,13 +2,12 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertsListPanel } from '../../components/monitor/AlertsListPanel';
 import { AlertDetailPanel } from '../../components/monitor/AlertDetailPanel';
-import { MapView } from '../../components/monitor/MapView';
+import { AlertMapView } from '../../components/monitor/AlertMapView';
 import { useAlerts, useAlertUnreadCount } from '../../hooks/useAlerts';
 import { useMarkAlertRead, useMarkAllAlertsRead } from '../../hooks/useAlertMutations';
 import { useReverseGeocode } from '../../hooks/useReverseGeocode';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import type { Alert } from '../../types/alert';
-import type { Device } from '../../types/device';
 
 export function MonitorAlertsPage() {
   const [selectedAlert, setSelectedAlert] = useState<Alert | undefined>();
@@ -17,10 +16,8 @@ export function MonitorAlertsPage() {
   const { data, isLoading } = useAlerts();
   const { mutate: markRead } = useMarkAlertRead();
   const { mutate: markAllRead } = useMarkAllAlertsRead();
-  // Keep unread count synced in store (for sidebar badge + nav bell)
   useAlertUnreadCount();
 
-  // Real-time: prepend new alerts + update unread count
   useWebSocket(useCallback((msg) => {
     if (msg.type === 'NEW_ALERT') {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
@@ -30,21 +27,6 @@ export function MonitorAlertsPage() {
 
   const alerts = data?.data ?? [];
 
-  // Derive map devices from alerts that have coordinates
-  const alertDevices: Device[] = alerts
-    .filter((a) => a.latitude != null && a.longitude != null)
-    .map((a) => ({
-      id: a.id,
-      name: a.device?.name ?? 'Alert',
-      imei: a.device?.imei ?? '',
-      status: 'online' as const,
-      lat: a.latitude,
-      lng: a.longitude,
-      createdAt: a.createdAt,
-      updatedAt: a.createdAt,
-    }));
-
-  // Geocode for detail panel
   const { address, loading: addressLoading } = useReverseGeocode(
     selectedAlert?.latitude ?? null,
     selectedAlert?.longitude ?? null,
@@ -56,13 +38,7 @@ export function MonitorAlertsPage() {
 
   const handleMarkRead = (id: string) => {
     markRead(id);
-    // Optimistic update
     setSelectedAlert((prev) => prev?.id === id ? { ...prev, isRead: true } : prev);
-  };
-
-  const handleMapSelect = (device: Device) => {
-    const match = alerts.find((a) => a.id === device.id);
-    if (match) setSelectedAlert(match);
   };
 
   return (
@@ -81,10 +57,10 @@ export function MonitorAlertsPage() {
 
       {/* Main — map */}
       <main className="flex-1 relative overflow-hidden">
-        <MapView
-          devices={alertDevices}
+        <AlertMapView
+          alerts={alerts}
           selectedId={selectedAlert?.id}
-          onSelect={handleMapSelect}
+          onSelect={handleSelect}
         />
 
         {/* Right overlay — detail panel */}
