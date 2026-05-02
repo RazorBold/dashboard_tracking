@@ -11,17 +11,9 @@ function FlyToDevice({ device }: FlyToProps) {
   const map = useMap();
   useEffect(() => {
     if (device?.lat == null || device?.lng == null) return;
-    const target: [number, number] = [device.lat, device.lng];
     const currentZoom = map.getZoom();
-    // Stay at current zoom if user has already zoomed in past 15; otherwise zoom in to 15.
-    const targetZoom = currentZoom >= 15 ? currentZoom : 15;
-
-    map.flyTo(target, targetZoom, {
-      animate: true,
-      duration: 1.4,        // longer arc = smoother feel
-      easeLinearity: 0.25,  // slow ease-out, gentle landing
-      noMoveStart: false,
-    });
+    const targetZoom = currentZoom >= 13 ? currentZoom : 13;
+    map.setView([device.lat, device.lng], targetZoom, { animate: true, duration: 0.5 });
   }, [device, map]);
   return null;
 }
