@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Search, Circle as CircleIcon, Pentagon, Navigation } from 'lucide-react';
+import { Search, CircleDot, Pentagon, Navigation2 } from 'lucide-react';
 import type { Geofence, CircleGeometry } from '../../types/geofence';
 import type { Device } from '../../types/device';
+
+// Same palette as ZoneMapView so icon color matches the map ring
+const ZONE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'];
 
 interface Props {
   fences: Geofence[];
@@ -25,12 +28,15 @@ export function ZoneListPanel({ fences, devicesByZone, selectedFenceId, onSelect
   }, [devicesByZone, totalDevices]);
 
   const filtered = useMemo(
-    () =>
-      fences.filter((f) =>
-        !search || f.name.toLowerCase().includes(search.toLowerCase()),
-      ),
+    () => fences.filter((f) => !search || f.name.toLowerCase().includes(search.toLowerCase())),
     [fences, search],
   );
+
+  const totalInside = useMemo(() => {
+    let n = 0;
+    devicesByZone.forEach((devs) => { n += devs.length; });
+    return n;
+  }, [devicesByZone]);
 
   return (
     <div className="device-panel">
@@ -46,76 +52,79 @@ export function ZoneListPanel({ fences, devicesByZone, selectedFenceId, onSelect
       </div>
 
       {/* Zone list */}
-      <ul className="flex-1 overflow-y-auto divide-y divide-slate-100">
-        {filtered.map((fence) => {
+      <div className="zone-panel__list">
+        {filtered.map((fence, idx) => {
           const devs = devicesByZone.get(fence.id) ?? [];
           const isSelected = fence.id === selectedFenceId;
           const hasDevices = devs.length > 0;
+          const color = ZONE_COLORS[idx % ZONE_COLORS.length];
 
           return (
-            <li
+            <div
               key={fence.id}
               onClick={() => onSelect(isSelected ? null : fence.id)}
-              className={`px-3 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${
-                isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''
-              }`}
+              className={`zone-panel__item${isSelected ? ' zone-panel__item--selected' : ''}`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex items-center gap-2">
-                  {fence.type === 'circle'
-                    ? <CircleIcon size={12} className="text-slate-400 flex-shrink-0" />
-                    : <Pentagon size={12} className="text-slate-400 flex-shrink-0" />}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{fence.name}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {fence.type === 'circle'
-                        ? `Circle · ${fmtRadius((fence.geometry as CircleGeometry).radius)}`
-                        : 'Polygon'}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`flex-shrink-0 min-w-[22px] text-center text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
-                    hasDevices
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-400'
-                  }`}
-                >
-                  {devs.length}
-                </span>
+              {/* Colored icon */}
+              <div
+                className="zone-panel__icon-wrap"
+                style={{ background: `${color}22`, border: `1.5px solid ${color}55` }}
+              >
+                {fence.type === 'circle'
+                  ? <CircleDot size={15} style={{ color }} />
+                  : <Pentagon size={15} style={{ color }} />}
               </div>
-            </li>
+
+              {/* Name + sub-label */}
+              <div className="zone-panel__info">
+                <p className={`zone-panel__name${!hasDevices ? ' zone-panel__name--muted' : ''}`}>
+                  {fence.name}
+                </p>
+                <p className="zone-panel__sub">
+                  {fence.type === 'circle'
+                    ? `Circle · ${fmtRadius((fence.geometry as CircleGeometry).radius)}`
+                    : 'Polygon'}
+                </p>
+              </div>
+
+              {/* Vehicle count badge */}
+              <span className={`zone-panel__badge ${hasDevices ? 'zone-panel__badge--has' : 'zone-panel__badge--empty'}`}>
+                {devs.length}
+              </span>
+            </div>
           );
         })}
 
-        {/* Outside all zones row */}
-        <li
+        {/* Divider before outside-zones row */}
+        <div className="zone-panel__divider" />
+
+        {/* Outside all zones */}
+        <div
           onClick={() => onSelect(null)}
-          className={`px-3 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${
-            selectedFenceId === null ? 'bg-primary-50 border-l-2 border-primary-500' : ''
-          }`}
+          className={`zone-panel__item${selectedFenceId === null ? ' zone-panel__item--selected' : ''}`}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <Navigation size={12} className="text-slate-400 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-slate-600">Outside zones</p>
-                <p className="text-[11px] text-slate-400">On the road</p>
-              </div>
-            </div>
-            <span className={`flex-shrink-0 min-w-[22px] text-center text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
-              outsideCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'
-            }`}>
-              {outsideCount}
-            </span>
+          <div
+            className="zone-panel__icon-wrap"
+            style={{ background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.3)' }}
+          >
+            <Navigation2 size={15} style={{ color: '#fbbf24' }} />
           </div>
-        </li>
-      </ul>
+          <div className="zone-panel__info">
+            <p className="zone-panel__name" style={{ color: '#fbbf24' }}>Outside zones</p>
+            <p className="zone-panel__sub">On the road</p>
+          </div>
+          <span className={`zone-panel__badge ${outsideCount > 0 ? 'zone-panel__badge--outside' : 'zone-panel__badge--empty'}`}>
+            {outsideCount}
+          </span>
+        </div>
+      </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-slate-100 text-[11px] text-slate-400 flex justify-between">
+      <div className="zone-panel__footer">
         <span>{fences.length} zone{fences.length !== 1 ? 's' : ''}</span>
-        <span>{totalDevices} vehicle{totalDevices !== 1 ? 's' : ''}</span>
+        <span style={{ color: totalInside > 0 ? '#34d399' : undefined }}>
+          {totalInside > 0 ? `${totalInside} / ${totalDevices}` : totalDevices} vehicle{totalDevices !== 1 ? 's' : ''}
+        </span>
       </div>
     </div>
   );

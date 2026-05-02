@@ -1221,6 +1221,115 @@ button, input, textarea, select {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Zone List Panel
+   ═══════════════════════════════════════════════════════ */
+.zone-panel__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.zone-panel__list::-webkit-scrollbar { width: 4px; }
+.zone-panel__list::-webkit-scrollbar-track { background: transparent; }
+.zone-panel__list::-webkit-scrollbar-thumb { background: var(--slate-600); border-radius: 4px; }
+
+.zone-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+  margin-bottom: 2px;
+}
+.zone-panel__item:hover {
+  background: var(--slate-700);
+  border-color: var(--slate-600);
+}
+.zone-panel__item--selected {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15) inset;
+}
+
+.zone-panel__icon-wrap {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zone-panel__info {
+  flex: 1;
+  min-width: 0;
+}
+.zone-panel__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.zone-panel__name--muted { color: var(--slate-400); }
+.zone-panel__sub {
+  font-size: 11px;
+  color: var(--slate-500);
+  margin-top: 1px;
+}
+
+.zone-panel__badge {
+  flex-shrink: 0;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zone-panel__badge--has {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+.zone-panel__badge--empty {
+  background: rgba(100, 116, 139, 0.18);
+  color: var(--slate-500);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+.zone-panel__badge--outside {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+}
+
+.zone-panel__divider {
+  height: 1px;
+  background: var(--slate-700);
+  margin: 6px 10px;
+}
+
+.zone-panel__footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid var(--slate-700);
+  font-size: 11px;
+  color: var(--slate-500);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
    Device Detail Sidebar
    ═══════════════════════════════════════════════════════ */
 .detail-sidebar {
