@@ -233,14 +233,29 @@ const WAYPOINTS: { lat: number; lng: number; speed: number }[] = [
   { lat: -6.1870, lng: 106.8276, speed: 0 },
 ];
 
-/**
- * Generates a realistic GPS track with ~200 points
- * by interpolating between the defined waypoints.
- */
-export function generateDummyTrack(deviceId: string, fromIso: string, _toIso: string): TrackPosition[] {
+// Alternative routes for multi-track: each is a distinct Jakarta corridor
+// [latOffset, lngOffset] relative to the base WAYPOINTS route
+const MULTI_TRACK_OFFSETS: Array<{ latOff: number; lngOff: number; speedMult: number }> = [
+  { latOff:  0,      lngOff:  0,      speedMult: 1.0 }, // 0: Monas loop (base)
+  { latOff:  0.010, lngOff:  0.018, speedMult: 0.9 }, // 1: Kemayoran → Cempaka Putih corridor
+  { latOff: -0.008, lngOff: -0.020, speedMult: 1.1 }, // 2: Palmerah → Grogol corridor
+  { latOff:  0.018, lngOff: -0.010, speedMult: 0.85 }, // 3: Rawamangun → Pulo Gadung
+  { latOff: -0.015, lngOff:  0.025, speedMult: 1.05 }, // 4: Tebet → Pancoran corridor
+];
+
+function deviceRouteIndex(deviceId: string): number {
+  let hash = 0;
+  for (let k = 0; k < deviceId.length; k++) hash = (hash * 31 + deviceId.charCodeAt(k)) >>> 0;
+  return hash % MULTI_TRACK_OFFSETS.length;
+}
+
+export function generateDummyTrack(deviceId: string, fromIso: string, _toIso: string, routeIndex?: number): TrackPosition[] {
   const start = new Date(fromIso);
   const points: TrackPosition[] = [];
-  const intervalMs = 60_000; // 1 minute per point
+  const intervalMs = 60_000;
+
+  const idx = routeIndex ?? deviceRouteIndex(deviceId);
+  const { latOff, lngOff, speedMult } = MULTI_TRACK_OFFSETS[idx];
 
   WAYPOINTS.forEach((wp, i) => {
     const ts = new Date(start.getTime() + i * intervalMs);
@@ -248,11 +263,11 @@ export function generateDummyTrack(deviceId: string, fromIso: string, _toIso: st
     const jLng = (Math.random() - 0.5) * 0.00015;
 
     points.push({
-      id: `track-${i}`,
+      id: `track-${deviceId}-${i}`,
       deviceId,
-      latitude: wp.lat + jLat,
-      longitude: wp.lng + jLng,
-      speed: Math.max(0, wp.speed + (Math.random() - 0.5) * 4),
+      latitude:  wp.lat + latOff + jLat,
+      longitude: wp.lng + lngOff + jLng,
+      speed: Math.max(0, wp.speed * speedMult + (Math.random() - 0.5) * 4),
       heading: i > 0
         ? Math.round(Math.atan2(wp.lng - WAYPOINTS[i - 1].lng, wp.lat - WAYPOINTS[i - 1].lat) * 180 / Math.PI)
         : 180,
