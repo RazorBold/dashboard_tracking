@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
 
     const where = and(...conditions);
     const pageNum = Math.max(1, parseInt(page as string, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit as string, 10)));
     const offset = (pageNum - 1) * limitNum;
 
     const [data, totalResult] = await Promise.all([

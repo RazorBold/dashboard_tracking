@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from '../utils/axiosClient';
 import type { TrackHistoryResponse, TripSummary, TrackPosition } from '../types/track';
+import { generateDummyTrack } from '../data/dummyTrackData';
 
 interface UseTracksParams {
   deviceId: string | null;
@@ -17,6 +18,13 @@ export function useTracks({ deviceId, from, to }: UseTracksParams) {
         `/devices/${deviceId}/positions`,
         { params: { from, to } },
       );
+
+      // --- INJECT DUMMY DATA WHEN API RETURNS EMPTY (ISSUE #10) ---
+      if (!data.data || data.data.length < 2) {
+        const dummyPositions = generateDummyTrack(deviceId!, from!, to!);
+        return { success: true, data: dummyPositions };
+      }
+
       return data;
     },
     staleTime: 5 * 60 * 1000,
@@ -50,7 +58,7 @@ export function computeTripSummary(positions: TrackPosition[]): TripSummary {
   return {
     totalPoints: positions.length,
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
-    maxSpeedKmh: Math.max(...speeds),
+    maxSpeedKmh: Math.round(Math.max(...speeds)),
     avgSpeedKmh: Math.round(avgSpeedKmh),
     durationMinutes: Math.round(durationMinutes),
     stoppedMinutes: Math.round(stoppedMinutes),

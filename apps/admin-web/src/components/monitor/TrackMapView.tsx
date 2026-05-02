@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { TrackPosition } from '../../types/track';
 
@@ -45,6 +45,10 @@ function makePlaybackIcon(color: string): L.DivIcon {
   });
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 function FitBounds({ positions }: { positions: TrackPosition[] }) {
   const map = useMap();
   const fitted = useRef(false);
@@ -79,13 +83,13 @@ export function TrackMapView({ positions, playbackIndex }: Props) {
 
   const startIcon = L.divIcon({
     className: 'track-start-marker',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:#10b981;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
-    iconSize: [14, 14], iconAnchor: [7, 7],
+    html: `<div style="width:16px;height:16px;border-radius:50%;background:#10b981;border:3px solid white;box-shadow:0 0 6px #10b981,0 2px 6px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [16, 16], iconAnchor: [8, 8],
   });
   const endIcon = L.divIcon({
     className: 'track-end-marker',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
-    iconSize: [14, 14], iconAnchor: [7, 7],
+    html: `<div style="width:16px;height:16px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px #ef4444,0 2px 6px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [16, 16], iconAnchor: [8, 8],
   });
 
   return (
@@ -107,6 +111,35 @@ export function TrackMapView({ positions, playbackIndex }: Props) {
       {segments.map((seg, i) => (
         <Polyline key={i} positions={seg.pts} color={seg.color} weight={4} opacity={0.85} />
       ))}
+
+      {/* Individual GPS point dots — visible as small circles along the route */}
+      {positions.map((pos, i) => {
+        const spd = pos.speed ?? 0;
+        const isStopped = spd < 3;
+        return (
+          <CircleMarker
+            key={`dot-${i}`}
+            center={[pos.latitude, pos.longitude]}
+            radius={isStopped ? 5 : 3}
+            pathOptions={{
+              color: isStopped ? '#ef4444' : speedColor(spd),
+              fillColor: isStopped ? '#fecaca' : speedColor(spd),
+              fillOpacity: isStopped ? 0.9 : 0.7,
+              weight: isStopped ? 2 : 1.5,
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
+              <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
+                <strong>Point #{i + 1}</strong><br />
+                🕐 {formatTime(pos.timestamp)}<br />
+                🚗 {spd.toFixed(0)} km/h<br />
+                📍 {pos.latitude.toFixed(5)}, {pos.longitude.toFixed(5)}
+                {isStopped && <><br /><span style={{ color: '#ef4444', fontWeight: 600 }}>⏸ Stopped</span></>}
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
 
       {/* Start / End markers */}
       {startPos && (
