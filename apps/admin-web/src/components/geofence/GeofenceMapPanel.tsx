@@ -18,11 +18,13 @@ const POINT_ICON = L.divIcon({
   iconAnchor: [4, 4],
 });
 
-// ─── FitBounds when fences change ────────────────────
+// ─── FitBounds on first load only ────────────────────
 function FitFences({ fences }: { fences: Geofence[] }) {
   const map = useMap();
+  const fitted = useRef(false);
   useEffect(() => {
-    if (fences.length === 0) return;
+    if (fences.length === 0 || fitted.current) return;
+    fitted.current = true;
     const allPoints: [number, number][] = [];
     for (const f of fences) {
       const geo = f.geometry as any;
@@ -36,6 +38,25 @@ function FitFences({ fences }: { fences: Geofence[] }) {
       map.fitBounds(L.latLngBounds(allPoints), { padding: [40, 40], maxZoom: 14 });
     }
   }, [fences, map]);
+  return null;
+}
+
+// ─── Pan/zoom to selected geofence ───────────────────
+function FlyToFence({ fences, selectedId }: { fences: Geofence[]; selectedId: string | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!selectedId) return;
+    const fence = fences.find((f) => f.id === selectedId);
+    if (!fence) return;
+    if (fence.type === 'circle') {
+      const geo = fence.geometry as CircleGeometry;
+      map.setView([geo.center.lat, geo.center.lng], 15, { animate: true, duration: 0.5 });
+    } else {
+      const geo = fence.geometry as PolygonGeometry;
+      const pts = geo.points.map((p) => [p.lat, p.lng] as [number, number]);
+      map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 15, animate: true });
+    }
+  }, [selectedId, fences, map]);
   return null;
 }
 
@@ -150,6 +171,7 @@ export function GeofenceMapPanel({ fences, selectedId, drawMode, draftCenter, dr
       />
 
       {fences.length > 0 && drawMode === 'none' && <FitFences fences={fences} />}
+      {fences.length > 0 && drawMode === 'none' && <FlyToFence fences={fences} selectedId={selectedId} />}
     </MapContainer>
   );
 }

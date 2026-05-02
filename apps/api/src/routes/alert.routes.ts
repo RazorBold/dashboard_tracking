@@ -5,11 +5,34 @@ import { alerts } from '../db/schema';
 import { eq, desc, and, count } from 'drizzle-orm';
 
 const router = Router();
-
-// Protect all alert routes
 router.use(verifyToken);
 
-// 1. Get all alerts for the user's organization
+/**
+ * @swagger
+ * tags:
+ *   name: Alerts
+ *   description: Real-time alert management
+ */
+
+/**
+ * @swagger
+ * /api/alerts:
+ *   get:
+ *     summary: List alerts for the caller's organization
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, default: 0 }
+ *     responses:
+ *       200:
+ *         description: List of alerts (newest first), each with device info
+ */
 router.get('/', async (req, res) => {
   try {
     const orgId = req.user?.orgId;
@@ -23,20 +46,33 @@ router.get('/', async (req, res) => {
       orderBy: [desc(alerts.createdAt)],
       limit,
       offset,
-      with: {
-        device: {
-          columns: { name: true, imei: true }
-        }
-      }
+      with: { device: { columns: { name: true, imei: true } } },
     });
 
     res.json({ data });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 });
 
-// 2. Get unread alerts count
+/**
+ * @swagger
+ * /api/alerts/count:
+ *   get:
+ *     summary: Get unread alert count
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Number of unread alerts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 unread: { type: integer, example: 7 }
+ */
 router.get('/count', async (req, res) => {
   try {
     const orgId = req.user?.orgId;
@@ -47,12 +83,57 @@ router.get('/count', async (req, res) => {
       .where(and(eq(alerts.organizationId, orgId), eq(alerts.isRead, false)));
 
     res.json({ unread: result[0].value });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to count alerts' });
   }
 });
 
-// 3. Mark an alert as read
+/**
+ * @swagger
+ * /api/alerts/read-all:
+ *   put:
+ *     summary: Mark all unread alerts as read
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All alerts marked as read
+ */
+router.put('/read-all', async (req, res) => {
+  try {
+    const orgId = req.user?.orgId;
+    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+
+    await db.update(alerts)
+      .set({ isRead: true })
+      .where(and(eq(alerts.organizationId, orgId), eq(alerts.isRead, false)));
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to update alerts' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/alerts/{id}/read:
+ *   put:
+ *     summary: Mark a single alert as read
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Alert updated
+ *       404:
+ *         description: Alert not found
+ */
 router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,26 +146,9 @@ router.put('/:id/read', async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: 'Alert not found' });
-
     res.json({ success: true, alert: updated });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to update alert' });
-  }
-});
-
-// 4. Mark all alerts as read
-router.put('/read-all', async (req, res) => {
-  try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
-
-    await db.update(alerts)
-      .set({ isRead: true })
-      .where(and(eq(alerts.organizationId, orgId), eq(alerts.isRead, false)));
-
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update alerts' });
   }
 });
 

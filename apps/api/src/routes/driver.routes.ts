@@ -8,6 +8,147 @@ import { drivers } from '../db/schema';
 const router = Router();
 router.use(verifyToken);
 
+/**
+ * @swagger
+ * tags:
+ *   name: Drivers
+ *   description: Driver management
+ */
+
+/**
+ * @swagger
+ * /api/drivers:
+ *   get:
+ *     summary: List drivers (paginated, filterable)
+ *     tags: [Drivers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Search by name or driver number
+ *       - in: query
+ *         name: registerPlace
+ *         schema: { type: string }
+ *       - in: query
+ *         name: licenseExpired
+ *         schema: { type: string, enum: ['true'] }
+ *         description: Filter drivers with expired license
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Paginated list of drivers
+ */
+
+/**
+ * @swagger
+ * /api/drivers/export:
+ *   get:
+ *     summary: Export all drivers to CSV
+ *     tags: [Drivers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ *         content:
+ *           text/csv:
+ *             schema: { type: string }
+ */
+
+/**
+ * @swagger
+ * /api/drivers:
+ *   post:
+ *     summary: Create a new driver
+ *     tags: [Drivers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [driverNo, name]
+ *             properties:
+ *               driverNo: { type: string }
+ *               name: { type: string }
+ *               phone: { type: string }
+ *               licenseNo: { type: string }
+ *               rfidCardNo: { type: string }
+ *               kc208: { type: string }
+ *               registerPlace: { type: string }
+ *               registerDate: { type: string, format: date-time }
+ *               licenseExpiry: { type: string, format: date-time }
+ *               fleetName: { type: string }
+ *               status: { type: string, enum: [active, inactive, suspended] }
+ *     responses:
+ *       201:
+ *         description: Driver created
+ *       400:
+ *         description: Validation error
+ */
+
+/**
+ * @swagger
+ * /api/drivers/{id}:
+ *   put:
+ *     summary: Update a driver
+ *     tags: [Drivers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               driverNo: { type: string }
+ *               name: { type: string }
+ *               phone: { type: string }
+ *               licenseNo: { type: string }
+ *               licenseExpiry: { type: string, format: date-time }
+ *               status: { type: string, enum: [active, inactive, suspended] }
+ *     responses:
+ *       200:
+ *         description: Driver updated
+ *       404:
+ *         description: Driver not found
+ */
+
+/**
+ * @swagger
+ * /api/drivers/{id}:
+ *   delete:
+ *     summary: Delete a driver
+ *     tags: [Drivers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Driver deleted
+ *       404:
+ *         description: Driver not found
+ */
+
 function computeLicenseStatus(licenseExpiry: Date | null): string {
   if (!licenseExpiry) return 'N/A';
   const days = Math.floor((licenseExpiry.getTime() - Date.now()) / 86400000);

@@ -22,6 +22,7 @@ import {
   MonitorAlertsPage,
   MonitorTracksPage,
   MonitorMultiTrackPage,
+  ZoneMonitorPage,
 } from './pages/monitor';
 
 // Report pages
@@ -81,6 +82,7 @@ function App() {
             <Route path="/monitor/alerts" element={<MonitorAlertsPage />} />
             <Route path="/monitor/tracks" element={<MonitorTracksPage />} />
             <Route path="/monitor/multi-track" element={<MonitorMultiTrackPage />} />
+            <Route path="/monitor/zone" element={<ZoneMonitorPage />} />
             <Route path="/monitor" element={<Navigate to="/monitor/objects" replace />} />
 
             {/* Report */}

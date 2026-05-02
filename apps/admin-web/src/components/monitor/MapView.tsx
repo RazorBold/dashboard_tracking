@@ -10,11 +10,10 @@ interface FlyToProps {
 function FlyToDevice({ device }: FlyToProps) {
   const map = useMap();
   useEffect(() => {
-    if (device?.lat != null && device?.lng != null) {
-      // Use setView instead of flyTo. flyTo calculates heavy bounding boxes and zooms out,
-      // which causes massive lag when there are many markers. setView smoothly pans.
-      map.setView([device.lat, device.lng], 15, { animate: true, duration: 1 });
-    }
+    if (device?.lat == null || device?.lng == null) return;
+    const currentZoom = map.getZoom();
+    const targetZoom = currentZoom >= 13 ? currentZoom : 13;
+    map.setView([device.lat, device.lng], targetZoom, { animate: true, duration: 0.5 });
   }, [device, map]);
   return null;
 }

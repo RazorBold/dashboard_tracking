@@ -6,6 +6,97 @@ import * as reportService from '../services/report.service';
 const router = Router();
 router.use(verifyToken);
 
+/**
+ * @swagger
+ * tags:
+ *   name: ReportTemplates
+ *   description: Saved report templates
+ */
+
+/**
+ * @swagger
+ * /api/report-templates:
+ *   get:
+ *     summary: List all report templates for the organization
+ *     tags: [ReportTemplates]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of report templates
+ */
+
+/**
+ * @swagger
+ * /api/report-templates:
+ *   post:
+ *     summary: Create a new report template
+ *     tags: [ReportTemplates]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, reportType]
+ *             properties:
+ *               name: { type: string }
+ *               reportType: { type: string, enum: [daily_activity, track_details] }
+ *               deviceId: { type: string, format: uuid }
+ *               dateFrom: { type: string, format: date-time }
+ *               dateTo: { type: string, format: date-time }
+ *     responses:
+ *       201:
+ *         description: Template created
+ *       400:
+ *         description: Validation error
+ */
+
+/**
+ * @swagger
+ * /api/report-templates/{id}/run:
+ *   get:
+ *     summary: Run a report template and download as CSV
+ *     tags: [ReportTemplates]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ *         content:
+ *           text/csv:
+ *             schema: { type: string }
+ *       404:
+ *         description: Report template not found
+ */
+
+/**
+ * @swagger
+ * /api/report-templates/{id}:
+ *   delete:
+ *     summary: Delete a report template
+ *     tags: [ReportTemplates]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204:
+ *         description: Template deleted
+ *       404:
+ *         description: Template not found
+ */
+
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   reportType: z.enum(['daily_activity', 'track_details']),

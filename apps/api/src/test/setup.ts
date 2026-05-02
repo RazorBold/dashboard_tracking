@@ -27,8 +27,32 @@ vi.mock('../config/logger', () => ({
   },
 }));
 
-// Mock WebSocket broadcast functions — no real WS server in tests
+// Mock WebSocket — no real WS server in tests
 vi.mock('../config/websocket', () => ({
+  initWebSocket: vi.fn(),
   broadcastLocation: vi.fn(),
   broadcastAlert: vi.fn(),
 }));
+
+// Mock auth middleware so route tests don't need real JWTs
+// Some routes import from barrel '../middleware', others from '../middleware/auth.middleware' directly
+vi.mock('../middleware/auth.middleware', () => ({
+  verifyToken: (req: any, _res: any, next: any) => {
+    req.user = { sub: 'test-user-id', email: 'test@example.com', role: 'admin', orgId: 'test-org-id' };
+    next();
+  },
+  requireRole: (..._roles: string[]) => (_req: any, _res: any, next: any) => next(),
+}));
+
+vi.mock('../middleware', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../middleware')>();
+  return {
+    ...actual,
+    verifyToken: (req: any, _res: any, next: any) => {
+      req.user = { sub: 'test-user-id', email: 'test@example.com', role: 'admin', orgId: 'test-org-id' };
+      next();
+    },
+    requireRole: (..._roles: string[]) => (_req: any, _res: any, next: any) => next(),
+    // validate is NOT overridden — real Zod validation runs in route tests
+  };
+});

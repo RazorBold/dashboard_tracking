@@ -6,6 +6,118 @@ import * as userService from '../services/user.service';
 export const usersRouter = Router();
 usersRouter.use(verifyToken);
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: Organization sub-account management
+ */
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: List all users in the caller's organization
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of user objects
+ */
+
+/**
+ * @swagger
+ * /api/users/stats:
+ *   get:
+ *     summary: Get organization statistics for the dashboard
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Org stats (device count, active devices, user count, etc.)
+ */
+
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Create a sub-account (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string, minLength: 6 }
+ *               role: { type: string, enum: [admin, operator, viewer] }
+ *     responses:
+ *       201:
+ *         description: User created
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Insufficient role
+ */
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update a sub-account (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               role: { type: string, enum: [admin, operator, viewer] }
+ *               password: { type: string, minLength: 6 }
+ *     responses:
+ *       200:
+ *         description: User updated
+ *       404:
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Remove a sub-account (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: User removed
+ *       404:
+ *         description: User not found
+ */
+
 const createUserSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),

@@ -63,6 +63,7 @@ export const sidebarMenus: Record<string, SidebarConfig> = {
       { key: 'alerts', label: 'Alerts', icon: AlertTriangle, path: '/monitor/alerts' },
       { key: 'tracks', label: 'Tracks', icon: Route, path: '/monitor/tracks' },
       { key: 'multi-track', label: 'Multi-track', icon: Layers, path: '/monitor/multi-track' },
+      { key: 'zone', label: 'Zone Monitor', icon: MapPin, path: '/monitor/zone' },
     ],
   },
   report: {
