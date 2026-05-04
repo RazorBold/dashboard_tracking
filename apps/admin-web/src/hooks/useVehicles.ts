@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from '../utils/axiosClient';
+import { DUMMY_VEHICLE_RESPONSE } from '../data/dummyVehicleData';
 import type { VehicleListResponse, VehicleStatus } from '../types/vehicle';
 
 interface VehicleFilters {
@@ -14,15 +15,20 @@ export function useVehicles(filters: VehicleFilters = {}) {
 
   return useQuery({
     queryKey: ['vehicles', search, status, page, limit],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(limit));
-      if (search) params.set('search', search);
-      if (status) params.set('status', status);
-      const { data } = await axiosClient.get<VehicleListResponse>(`/vehicles?${params}`);
-      return data;
+    queryFn: async (): Promise<VehicleListResponse> => {
+      try {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('limit', String(limit));
+        if (search) params.set('search', search);
+        if (status) params.set('status', status);
+        const { data } = await axiosClient.get<VehicleListResponse>(`/vehicles?${params}`);
+        if (!data.data || data.data.length === 0) return DUMMY_VEHICLE_RESPONSE;
+        return data;
+      } catch {
+        return DUMMY_VEHICLE_RESPONSE;
+      }
     },
-    staleTime: 30_000,
+    staleTime: Infinity,
   });
 }

@@ -1,0 +1,23 @@
+import type { Driver, DriverListResponse } from '../types/driver';
+
+const NOW = new Date().toISOString();
+
+export const DUMMY_DRIVERS: Driver[] = [
+  { id: 'dummy-drv-01', driverNo: 'DRV-001', name: 'Budi Santoso', phone: '081234567890', licenseNo: 'SIM-B2-0001', rfidCardNo: 'RFID-0001', kc208: 'KC-001', registerPlace: 'Jakarta', registerDate: '2020-01-15', licenseExpiry: '2027-01-15', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Jakarta', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-02', driverNo: 'DRV-002', name: 'Agus Prasetyo', phone: '081298765432', licenseNo: 'SIM-B2-0002', rfidCardNo: 'RFID-0002', kc208: 'KC-002', registerPlace: 'Surabaya', registerDate: '2019-06-10', licenseExpiry: '2026-06-10', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Surabaya', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-03', driverNo: 'DRV-003', name: 'Siti Rahayu', phone: '081355443322', licenseNo: 'SIM-B1-0003', rfidCardNo: 'RFID-0003', kc208: 'KC-003', registerPlace: 'Bandung', registerDate: '2021-03-20', licenseExpiry: '2028-03-20', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Bandung', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-04', driverNo: 'DRV-004', name: 'Joko Widodo', phone: '085712345678', licenseNo: 'SIM-B2-0004', rfidCardNo: 'RFID-0004', kc208: 'KC-004', registerPlace: 'Semarang', registerDate: '2018-11-05', licenseExpiry: '2025-05-15', licenseStatus: 'expiring_soon', status: 'active', fleetName: 'Armada Semarang', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-05', driverNo: 'DRV-005', name: 'Dewi Lestari', phone: '081398765432', licenseNo: 'SIM-B1-0005', rfidCardNo: 'RFID-0005', kc208: 'KC-005', registerPlace: 'Medan', registerDate: '2020-07-12', licenseExpiry: '2027-07-12', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Medan', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-06', driverNo: 'DRV-006', name: 'Hendra Gunawan', phone: '082112345678', licenseNo: 'SIM-B2-0006', rfidCardNo: 'RFID-0006', kc208: null, registerPlace: 'Makassar', registerDate: '2017-04-22', licenseExpiry: '2024-04-22', licenseStatus: 'expired', status: 'suspended', fleetName: 'Armada Makassar', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-07', driverNo: 'DRV-007', name: 'Rini Wulandari', phone: '089812345678', licenseNo: 'SIM-B1-0007', rfidCardNo: 'RFID-0007', kc208: 'KC-007', registerPlace: 'Balikpapan', registerDate: '2022-01-10', licenseExpiry: '2029-01-10', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Kalimantan', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-08', driverNo: 'DRV-008', name: 'Andi Firmansyah', phone: '081387654321', licenseNo: 'SIM-B2-0008', rfidCardNo: 'RFID-0008', kc208: 'KC-008', registerPlace: 'Palembang', registerDate: '2019-09-15', licenseExpiry: '2026-09-15', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Palembang', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-09', driverNo: 'DRV-009', name: 'Tono Hadiwijaya', phone: '081556677889', licenseNo: 'SIM-B1-0009', rfidCardNo: null, kc208: null, registerPlace: 'Yogyakarta', registerDate: '2021-11-30', licenseExpiry: '2028-11-30', licenseStatus: 'valid', status: 'inactive', fleetName: null, organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-10', driverNo: 'DRV-010', name: 'Wahyu Setiawan', phone: '082298765432', licenseNo: 'SIM-B2-0010', rfidCardNo: 'RFID-0010', kc208: 'KC-010', registerPlace: 'Pekanbaru', registerDate: '2020-05-18', licenseExpiry: '2027-05-18', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Riau', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-11', driverNo: 'DRV-011', name: 'Yusuf Rahman', phone: '083311223344', licenseNo: 'SIM-B2-0011', rfidCardNo: 'RFID-0011', kc208: 'KC-011', registerPlace: 'Banjarmasin', registerDate: '2018-08-08', licenseExpiry: '2025-08-08', licenseStatus: 'expiring_soon', status: 'active', fleetName: 'Armada Kalsel', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-drv-12', driverNo: 'DRV-012', name: 'Fitriani Putri', phone: '084456789012', licenseNo: 'SIM-B1-0012', rfidCardNo: 'RFID-0012', kc208: 'KC-012', registerPlace: 'Denpasar', registerDate: '2023-02-14', licenseExpiry: '2030-02-14', licenseStatus: 'valid', status: 'active', fleetName: 'Armada Bali', organizationId: null, createdAt: NOW, updatedAt: NOW },
+];
+
+export const DUMMY_DRIVER_RESPONSE: DriverListResponse = {
+  data: DUMMY_DRIVERS,
+  meta: { page: 1, limit: 50, total: DUMMY_DRIVERS.length },
+};
