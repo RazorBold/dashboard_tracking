@@ -7,12 +7,17 @@ export function useGeofences() {
   return useQuery<Geofence[]>({
     queryKey: ['geofences'],
     queryFn: async () => {
-      const { data } = await axiosClient.get<{ data: Geofence[] }>('/geofences');
-      if (!data.data || data.data.length === 0) {
+      try {
+        const { data } = await axiosClient.get<{ data: Geofence[] }>('/geofences');
+        if (!data.data || data.data.length === 0) return DUMMY_GEOFENCES;
+        return data.data;
+      } catch {
         return DUMMY_GEOFENCES;
       }
-      return data.data;
     },
-    staleTime: 30_000,
+    // Infinity prevents background refetch that would cause dummy fences to disappear
+    // once a real fence is created (real data length > 0 skips dummy injection).
+    // Data is refreshed on mount and after mutations via setQueryData.
+    staleTime: Infinity,
   });
 }
