@@ -36,18 +36,27 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── MQTT Broker ────────────────────────────────────
-  iot-mosquitto:
-    image: eclipse-mosquitto:2
-    container_name: iot-mosquitto
+  # ─── Message Broker (RabbitMQ) ──────────────────────
+  iot-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: iot-rabbitmq
     restart: unless-stopped
     ports:
-      - "1883:1883"
-      - "9001:9001"
+      - "5672:5672"    # AMQP — API server connects here
+      - "15672:15672"  # Management UI — http://localhost:15672
+      - "1883:1883"    # MQTT — IoT devices connect here (via rabbitmq_mqtt plugin)
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
     volumes:
-      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - mosquitto_data:/mosquitto/data
-      - mosquitto_log:/mosquitto/log
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
 
   # ─── API Backend ────────────────────────────────────
   iot-api:
@@ -63,7 +72,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-iot_admin}:${POSTGRES_PASSWORD:-iot_secret}@iot-postgres:5432/${POSTGRES_DB:-iot_platform}
       REDIS_URL: redis://iot-redis:6379
-      MQTT_URL: mqtt://iot-mosquitto:1883
+      RABBITMQ_URL: amqp://admin:admin123@iot-rabbitmq:5672
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change_me_super_secret_access_key_at_least_32ch}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_super_secret_refresh_key_at_least_32c}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
@@ -75,8 +84,8 @@ services:
         condition: service_healthy
       iot-redis:
         condition: service_healthy
-      iot-mosquitto:
-        condition: service_started
+      iot-rabbitmq:
+        condition: service_healthy
 
   # ─── Admin Web ──────────────────────────────────────
   iot-admin-web:
@@ -119,5 +128,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  mosquitto_data:
-  mosquitto_log:
+  rabbitmq_data:

@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 
-import { env, logger, swaggerSpec, mqttClient } from './config';
+import { env, logger, swaggerSpec, connectRabbitMQ } from './config';
 import { apiRouter } from './routes';
 import { notFoundHandler, errorHandler } from './middleware';
 
@@ -89,6 +89,7 @@ const server = app.listen(env.PORT, () => {
 });
 
 initWebSocket(server);
+connectRabbitMQ().catch((err) => logger.error({ err }, 'RabbitMQ init failed'));
 
 // ─── Graceful Shutdown ────────────────────────────────
 const shutdown = (signal: string) => {

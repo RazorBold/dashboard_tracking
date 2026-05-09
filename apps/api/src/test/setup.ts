@@ -34,6 +34,12 @@ vi.mock('../config/websocket', () => ({
   broadcastAlert: vi.fn(),
 }));
 
+// Mock RabbitMQ — no real broker in tests
+vi.mock('../config/rabbitmq', () => ({
+  connectRabbitMQ: vi.fn().mockResolvedValue(undefined),
+  publishCommand: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock auth middleware so route tests don't need real JWTs
 // Some routes import from barrel '../middleware', others from '../middleware/auth.middleware' directly
 vi.mock('../middleware/auth.middleware', () => ({

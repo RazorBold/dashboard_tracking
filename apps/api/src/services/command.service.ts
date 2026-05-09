@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { db } from '../db';
 import { deviceCommands } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { publishCommand } from '../config/mqtt';
+import { publishCommand } from '../config/rabbitmq';
 import { logger } from '../config/logger';
 
 export type CommandType = 'restart' | 'set_interval' | 'set_apn';

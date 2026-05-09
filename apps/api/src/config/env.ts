@@ -11,9 +11,9 @@ const envSchema = z.object({
     .string()
     .default('postgres://iot_admin:iot_secret@localhost:5432/iot_platform'),
 
-  // Redis & MQTT
+  // Redis & RabbitMQ
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  MQTT_URL: z.string().default('mqtt://localhost:1883'),
+  RABBITMQ_URL: z.string().default('amqp://admin:admin123@localhost:5672'),
 
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32).default('super_secret_access_key_at_least_32_chars!!'),
