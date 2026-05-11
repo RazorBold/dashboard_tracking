@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { loginSchema, type LoginFormData } from '../utils/validation';
 import { useAuthStore } from '../stores/authStore';
@@ -20,164 +20,251 @@ export function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-      rememberMe: false,
-    },
+    defaultValues: { email: '', password: '', rememberMe: false },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setError(null);
-
-      const response = await axiosClient.post<AuthResponse>(
-        '/auth/login',
-        {
-          email: data.email.trim(),
-          password: data.password,
-        }
-      );
-
+      const response = await axiosClient.post<AuthResponse>('/auth/login', {
+        email: data.email.trim(),
+        password: data.password,
+      });
       const { accessToken, user } = response.data.data;
-
-      // Store in local storage
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
-
-      // Update store
       setToken(accessToken);
       setUser(user);
-
       toast.success(`Welcome back, ${user.name}!`);
-
-      // Redirect to dashboard
       navigate('/monitor/objects', { replace: true });
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        'Login failed. Please try again.';
+      const message = error.response?.data?.message || error.message || 'Login failed. Please try again.';
       setError(message);
       toast.error(message);
     }
   };
 
   return (
-    <div className="flex flex-col">
-      {/* Logo */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">IoT Tracking</h1>
-        <p className="text-gray-500 text-sm mt-1">Admin Panel</p>
+    <>
+      {/* Logo & heading */}
+      <div className="lf-header">
+        <div className="lf-logo">
+          <MapPin size={18} strokeWidth={2.5} />
+        </div>
+        <div>
+          <div className="lf-logo-text">IoT Tracking</div>
+          <div className="lf-logo-sub">Fleet Management Platform</div>
+        </div>
       </div>
 
-      {/* Title */}
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In</h2>
-      <p className="text-gray-600 text-sm mb-8">
-        Enter your credentials to access the dashboard
-      </p>
+      <h2 className="lf-title">Welcome back</h2>
+      <p className="lf-subtitle">Sign in to your admin account</p>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Email Field */}
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <form onSubmit={handleSubmit(onSubmit)} className="lf-form">
+
+        {/* Email */}
+        <div className="lf-field">
+          <label className="lf-label">Email address</label>
+          <div className="lf-input-wrap">
+            <Mail size={16} className="lf-input-icon" />
             <input
               {...register('email')}
               type="email"
-              placeholder="you@example.com"
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.email
-                  ? 'border-red-300 bg-red-50'
-                  : 'border-gray-200 bg-gray-50 focus:bg-white'
-              }`}
+              placeholder="you@company.com"
+              className={`lf-input${errors.email ? ' lf-input--err' : ''}`}
             />
           </div>
           {errors.email && (
-            <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {errors.email.message}
-            </div>
+            <span className="lf-error"><AlertCircle size={13}/>{errors.email.message}</span>
           )}
         </div>
 
-        {/* Password Field */}
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {/* Password */}
+        <div className="lf-field">
+          <div className="lf-label-row">
+            <label className="lf-label">Password</label>
+            <a href="#" className="lf-forgot">Forgot password?</a>
+          </div>
+          <div className="lf-input-wrap">
+            <Lock size={16} className="lf-input-icon" />
             <input
               {...register('password')}
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className={`w-full pl-10 pr-12 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.password
-                  ? 'border-red-300 bg-red-50'
-                  : 'border-gray-200 bg-gray-50 focus:bg-white'
-              }`}
+              className={`lf-input lf-input--pw${errors.password ? ' lf-input--err' : ''}`}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="lf-eye">
+              {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
           </div>
           {errors.password && (
-            <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {errors.password.message}
-            </div>
+            <span className="lf-error"><AlertCircle size={13}/>{errors.password.message}</span>
           )}
         </div>
 
-        {/* Remember Me & Forgot Password */}
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              {...register('rememberMe')}
-              type="checkbox"
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-600">Remember me</span>
-          </label>
-          <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
-            Forgot password?
-          </a>
-        </div>
+        {/* Remember me */}
+        <label className="lf-remember">
+          <input {...register('rememberMe')} type="checkbox" className="lf-checkbox"/>
+          <span>Keep me signed in</span>
+        </label>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
+        {/* Submit */}
+        <button type="submit" disabled={isSubmitting} className="lf-btn">
           {isSubmitting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Signing in...
-            </>
+            <><Loader2 size={17} className="lf-spin"/>Signing in…</>
           ) : (
             'Sign In'
           )}
         </button>
       </form>
 
-      {/* Footer Text */}
-      <p className="text-center text-sm text-gray-500 mt-8">
-        Demo: admin@demo.com / admin123
-      </p>
-    </div>
+      {/* Demo hint */}
+      <div className="lf-demo">
+        <span className="lf-demo-dot"/>
+        <span>Demo: <strong>admin@demo.com</strong> / <strong>admin123</strong></span>
+      </div>
+
+      <style>{`
+        .lf-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 32px;
+        }
+        .lf-logo {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+          border-radius: 11px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+        }
+        .lf-logo-text { font-size: 15px; font-weight: 700; color: #0f172a; }
+        .lf-logo-sub  { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 1px; }
+
+        .lf-title {
+          font-size: 26px; font-weight: 800;
+          color: #0f172a; margin: 0 0 6px;
+          letter-spacing: -0.5px;
+        }
+        .lf-subtitle {
+          font-size: 14px; color: #64748b;
+          margin: 0 0 28px;
+        }
+
+        .lf-form { display: flex; flex-direction: column; gap: 18px; }
+
+        .lf-field { display: flex; flex-direction: column; gap: 6px; }
+
+        .lf-label {
+          font-size: 13px; font-weight: 600;
+          color: #334155; letter-spacing: 0.1px;
+        }
+        .lf-label-row {
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .lf-forgot {
+          font-size: 12px; color: #2563eb; font-weight: 500;
+          text-decoration: none;
+          transition: color 150ms;
+        }
+        .lf-forgot:hover { color: #1d4ed8; }
+
+        .lf-input-wrap { position: relative; }
+        .lf-input-icon {
+          position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+          color: #94a3b8; pointer-events: none;
+        }
+        .lf-input {
+          width: 100%;
+          padding: 11px 14px 11px 40px;
+          font-size: 14px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 10px;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          transition: border-color 150ms, background 150ms, box-shadow 150ms;
+          box-sizing: border-box;
+        }
+        .lf-input::placeholder { color: #cbd5e1; }
+        .lf-input:focus {
+          border-color: #3b82f6;
+          background: white;
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+        .lf-input--pw { padding-right: 44px; }
+        .lf-input--err { border-color: #fca5a5; background: #fef2f2; }
+        .lf-input--err:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+
+        .lf-eye {
+          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; padding: 4px;
+          color: #94a3b8; cursor: pointer;
+          display: flex; align-items: center;
+          transition: color 150ms;
+        }
+        .lf-eye:hover { color: #475569; }
+
+        .lf-error {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 12px; color: #ef4444; font-weight: 500;
+        }
+
+        .lf-remember {
+          display: flex; align-items: center; gap: 8px;
+          font-size: 13px; color: #475569;
+          cursor: pointer; user-select: none;
+        }
+        .lf-checkbox {
+          width: 15px; height: 15px;
+          border-radius: 4px;
+          accent-color: #2563eb;
+          cursor: pointer;
+        }
+
+        .lf-btn {
+          width: 100%;
+          padding: 12px;
+          font-size: 14px; font-weight: 700;
+          color: white;
+          background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
+          border: none; border-radius: 11px;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: opacity 150ms, transform 150ms, box-shadow 150ms;
+          box-shadow: 0 4px 14px rgba(37,99,235,0.4);
+          margin-top: 4px;
+          letter-spacing: 0.2px;
+        }
+        .lf-btn:hover:not(:disabled) {
+          opacity: 0.92;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(37,99,235,0.45);
+        }
+        .lf-btn:active:not(:disabled) { transform: translateY(0); }
+        .lf-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .lf-spin { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .lf-demo {
+          display: flex; align-items: center; gap: 8px;
+          margin-top: 24px;
+          padding: 11px 14px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 10px;
+          font-size: 12px; color: #0369a1;
+        }
+        .lf-demo-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: #0ea5e9;
+          flex-shrink: 0;
+          box-shadow: 0 0 0 3px rgba(14,165,233,0.2);
+        }
+      `}</style>
+    </>
   );
 }

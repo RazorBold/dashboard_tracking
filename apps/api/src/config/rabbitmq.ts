@@ -18,6 +18,9 @@ const DTC_QUEUE     = 'iot.dtc.queue';
 const DLX          = 'iot.dlx';
 const DEAD_QUEUE    = 'iot.dead.queue';
 
+// Teltonika gateway queues (published directly by codec bridge, not via amq.topic)
+const TELTONIKA_QUEUE = 'gps.prod.teltonika.events';
+
 let _channel: Channel | null = null;
 
 // ─── Connect & setup ──────────────────────────────────
@@ -42,38 +45,23 @@ export async function connectRabbitMQ(): Promise<void> {
   await channel.bindQueue(DEAD_QUEUE, DLX, '#');
 
   // Position queue — bound to amq.topic with MQTT-style routing key pattern
-  await channel.assertQueue(POS_QUEUE, {
-    durable: true,
-    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.position' },
-  });
+  await channel.assertQueue(POS_QUEUE, { durable: true });
   await channel.bindQueue(POS_QUEUE, EXCHANGE, 'device.#.position');
 
   // Alert queue — device-side events (SOS, vibration, collision, etc.)
-  await channel.assertQueue(ALERT_QUEUE, {
-    durable: true,
-    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.alert' },
-  });
+  await channel.assertQueue(ALERT_QUEUE, { durable: true });
   await channel.bindQueue(ALERT_QUEUE, EXCHANGE, 'device.#.alert');
 
   // OBD snapshot queue — device.{IMEI}.obd
-  await channel.assertQueue(OBD_QUEUE, {
-    durable: true,
-    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.obd' },
-  });
+  await channel.assertQueue(OBD_QUEUE, { durable: true });
   await channel.bindQueue(OBD_QUEUE, EXCHANGE, 'device.#.obd');
 
   // DTC fault code queue — device.{IMEI}.dtc
-  await channel.assertQueue(DTC_QUEUE, {
-    durable: true,
-    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.dtc' },
-  });
+  await channel.assertQueue(DTC_QUEUE, { durable: true });
   await channel.bindQueue(DTC_QUEUE, EXCHANGE, 'device.#.dtc');
 
   // Command response queue
-  await channel.assertQueue(CMD_QUEUE, {
-    durable: true,
-    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.command' },
-  });
+  await channel.assertQueue(CMD_QUEUE, { durable: true });
   await channel.bindQueue(CMD_QUEUE, EXCHANGE, 'command.#.response');
 
   // Process 1 message at a time — prevents overload during bursts
@@ -142,6 +130,65 @@ export async function connectRabbitMQ(): Promise<void> {
       channel.nack(msg, false, false);
     }
   }, { noAck: false });
+
+  // ─── Consumer: Teltonika gateway (gps.prod.teltonika.events) ────────────────
+  // Teltonika codec bridge publishes directly to this queue (default exchange).
+  // We assert passively so we don't fail if the queue doesn't exist yet.
+  try {
+    await channel.assertQueue(TELTONIKA_QUEUE, { durable: true, passive: false });
+    channel.consume(TELTONIKA_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
+      if (!msg) return;
+      try {
+        const envelope = JSON.parse(msg.content.toString()) as {
+          imei: string;
+          data: {
+            records: Array<{
+              timestamp_iso: string;
+              latitude: number;
+              longitude: number;
+              speed: number;
+              angle: number;
+              altitude: number;
+              satellites: number;
+              io?: Record<string, { value: number | string; label?: string }>;
+            }>;
+          };
+        };
+        const { imei, data } = envelope;
+        for (const rec of data.records) {
+          const io = rec.io ?? {};
+          // Common Teltonika IO IDs:
+          //   239 = ignition,  67 = battery voltage,  16 = total odometer (cm),
+          //   21 = GSM signal strength (0-5),  24 = speed (some codecs)
+          const accStatus = io['239']?.value ?? io['1']?.value ?? 0;
+          const batteryVoltage = io['67']?.value !== undefined ? Number(io['67'].value) : undefined;
+          const mileage = io['16']?.value !== undefined ? Math.round(Number(io['16'].value) / 100) : undefined; // cm → m
+          const gsmSignal = io['21']?.value !== undefined ? Number(io['21'].value) : undefined;
+
+          await processIncomingLocation(imei, {
+            lat: rec.latitude,
+            lng: rec.longitude,
+            speed: rec.speed,
+            heading: rec.angle,
+            altitude: rec.altitude,
+            satellites: rec.satellites,
+            accStatus: Number(accStatus),
+            batteryVoltage,
+            mileage,
+            gsmSignal,
+            timestamp: rec.timestamp_iso,
+          });
+        }
+        channel.ack(msg);
+      } catch (err) {
+        logger.error({ err, queue: TELTONIKA_QUEUE }, 'Failed to process Teltonika message');
+        channel.nack(msg, false, false);
+      }
+    }, { noAck: false });
+    logger.info('Teltonika consumer registered');
+  } catch (err) {
+    logger.warn({ err }, 'Teltonika queue not available — skipping consumer');
+  }
 
   // ─── Consumer: command response ──────────────────────
   channel.consume(CMD_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {

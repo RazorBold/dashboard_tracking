@@ -24,7 +24,7 @@ const PARAMS: Param[] = [
   { key: 'fuelLevel',     label: 'Fuel Level',        unit: '%',      color: '#f59e0b', getValue: (s) => n(s.fuelLevel),       domain: [0, 100] },
   { key: 'engineLoad',    label: 'Engine Load',       unit: '%',      color: '#8b5cf6', getValue: (s) => n(s.engineLoad),      domain: [0, 100] },
   { key: 'throttle',      label: 'Throttle',          unit: '%',      color: '#06b6d4', getValue: (s) => n(s.throttle),        domain: [0, 100] },
-  { key: 'batteryVoltage',label: 'Battery Voltage',   unit: 'V',      color: '#22c55e', getValue: (s) => n(s.batteryVoltage),  domain: [10, 15] },
+  { key: 'batteryVoltage',label: 'Battery Voltage',   unit: 'V',      color: '#22c55e', getValue: (s) => n(s.batteryVoltage),  domain: [3, 4.2] },
   { key: 'mafRate',       label: 'MAF Rate',          unit: 'g/s',    color: '#f97316', getValue: (s) => n(s.mafRate) },
   { key: 'intakeTemp',    label: 'Intake Temp',       unit: '°C',     color: '#ec4899', getValue: (s) => s.intakeTemp },
   { key: 'shortFuelTrim', label: 'Short Fuel Trim',   unit: '%',      color: '#a78bfa', getValue: (s) => n(s.shortFuelTrim) },
@@ -182,7 +182,7 @@ export function OBDHistoryPage() {
               />
               <Tooltip content={<ChartTooltip param={param} />} />
               {param.key === 'batteryVoltage' && (
-                <ReferenceLine y={11.5} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Low', fill: '#f59e0b', fontSize: 11 }} />
+                <ReferenceLine y={3.2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Low', fill: '#f59e0b', fontSize: 11 }} />
               )}
               {param.key === 'coolantTemp' && (
                 <ReferenceLine y={100} stroke="#ef4444" strokeDasharray="4 4" label={{ value: 'Hot', fill: '#ef4444', fontSize: 11 }} />

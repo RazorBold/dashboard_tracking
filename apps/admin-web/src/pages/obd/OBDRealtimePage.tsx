@@ -231,7 +231,7 @@ export function OBDRealtimePage() {
             <GaugeCard id="fuel"   label="Fuel Level"     value={n(snap?.fuelLevel)}               min={0}  max={100}  unit="%"    decimals={1} inverted />
             <GaugeCard id="load"   label="Engine Load"    value={n(snap?.engineLoad)}              min={0}  max={100}  unit="%"    decimals={1} />
             <GaugeCard id="throt"  label="Throttle"       value={n(snap?.throttle)}                min={0}  max={100}  unit="%"    decimals={1} />
-            <GaugeCard id="batt"   label="Battery Voltage" value={n(snap?.batteryVoltage)}         min={10} max={15}   unit="V"    decimals={1} inverted />
+            <GaugeCard id="batt"   label="Battery Voltage" value={n(snap?.batteryVoltage)}         min={3}  max={4.2}  unit="V"    decimals={1} inverted />
             <GaugeCard id="maf"    label="MAF Rate"       value={n(snap?.mafRate)}                 min={0}  max={100}  unit="g/s"  decimals={1} />
           </div>
 
