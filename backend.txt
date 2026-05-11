@@ -1,0 +1,826 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    IoT TRACKING DASHBOARD - BACKEND DOCUMENTATION
+                                  For Backend Developers
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT NAME: @iot-platform/api
+TYPE: REST API + Real-time Backend
+LOCATION: apps/api/
+
+───────────────────────────────────────────────────────────────────────────────
+1. TECH STACK
+───────────────────────────────────────────────────────────────────────────────
+
+RUNTIME & FRAMEWORK:
+  • Node.js (TypeScript)
+  • Express 5.x — Web framework
+  • tsx — TypeScript execution (dev)
+
+DATABASE & ORM:
+  • PostgreSQL — Primary relational database
+  • Drizzle ORM — TypeScript-first ORM (no migrations files needed)
+  • Redis (ioredis) — Cache layer for real-time position data
+  • Drizzle Studio — Visual database explorer
+
+REAL-TIME & MESSAGING:
+  • WebSocket (ws) — Server-to-client live updates (locations, alerts)
+  • MQTT (mqtt v5) — Device-to-server pub/sub messaging
+  • Socket.io-compatible (via native WebSocket)
+
+SECURITY & MIDDLEWARE:
+  • JWT (jsonwebtoken) — Authentication (access + refresh tokens)
+  • Helmet — HTTP security headers
+  • CORS — Cross-Origin Resource Sharing
+  • bcryptjs — Password hashing
+  • Cookie Parser — HTTP cookies
+
+LOGGING & MONITORING:
+  • Pino — Structured JSON logging (pino-pretty in dev)
+  • Morgan — HTTP request logging
+  • Built-in error handler middleware
+
+TESTING & VALIDATION:
+  • Vitest — Unit & integration test framework
+  • Supertest — HTTP endpoint testing
+  • Zod — TypeScript-first schema validation (runtime type checking)
+
+DOCUMENTATION:
+  • Swagger/OpenAPI (swagger-jsdoc + swagger-ui-express)
+  • JSDoc comments on routes
+
+UTILITIES:
+  • UUID — Unique identifier generation
+  • Dayjs — Date manipulation
+  • Compression — gzip response compression
+
+
+───────────────────────────────────────────────────────────────────────────────
+2. BACKEND ARCHITECTURE & DATA FLOW
+───────────────────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         CLIENT (Frontend/Mobile)                            │
+│                                                                             │
+│  • HTTP REST requests → auth, device, vehicle, geofence, etc              │
+│  • WebSocket subscribe → real-time location updates, alerts              │
+│  • JWT token in Authorization header                                      │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             │
+                             ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Express.js Server                                   │
+│                      apps/api/src/index.ts                                 │
+│                                                                             │
+│  1. CORS + Helmet (security)                                              │
+│  2. Body parser (JSON, URL-encoded)                                       │
+│  3. Morgan logger (HTTP logging)                                          │
+│  4. Cookie parser                                                         │
+│  5. Main route: /api/* → routes/index.ts                                 │
+│  6. WebSocket server init                                                │
+│  7. 404 & Error handlers                                                 │
+└────────────────────┬────────────────────────────┬────────────────────────────┘
+                     │                            │
+        ┌────────────┴────────────┐              └─────────────────────────┐
+        ↓                         ↓                                        ↓
+┌─────────────────┐      ┌──────────────────┐              ┌──────────────────┐
+│  REST Routes    │      │   WebSocket      │              │   MQTT Broker    │
+│ /api/...        │      │   Real-time      │              │   (External)     │
+│                 │      │   Location       │              │                  │
+│ auth/           │      │   Updates        │              │ Topic:device/+   │
+│ devices/        │      │   Alerts         │              │ /position        │
+│ vehicles/       │      │   Commands       │              │                  │
+│ alerts/         │      │   (via ws://)    │              │ Topic:           │
+│ geofences/      │      │                  │              │ command/+/       │
+│ ... etc         │      └──────────────────┘              │ response         │
+└────────┬────────┘                                        └──────────┬───────┘
+         │                                                            │
+         └────────────┬───────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        MIDDLEWARE LAYER                                     │
+│                   apps/api/src/middleware/                                 │
+│                                                                             │
+│  • verifyToken (JWT auth)                                                 │
+│  • validate (Zod validation → 422 on error)                              │
+│  • error handler (global error catcher)                                   │
+│  • notFoundHandler (404 responses)                                        │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      BUSINESS LOGIC (Services)                              │
+│                   apps/api/src/services/                                   │
+│                                                                             │
+│  • auth.service — JWT token generation, user validation                   │
+│  • device.service — CRUD operations, device registration                 │
+│  • tracking.service — Location processing, position storage              │
+│  • alert.service — Geofence detection, alert generation                  │
+│  • vehicle.service — Fleet management operations                         │
+│  • geofence.service — Zone management, boundary detection                │
+│  • report.service — Report generation, data aggregation                  │
+│  • user.service — User management, roles & permissions                   │
+│  • driver.service — Driver operations, assignments                       │
+│  • command.service — Device command routing                              │
+│  • device-group.service — Group operations                               │
+└────────────────────────────┬────────────────────────────────────────────────┘
+                             ↓
+         ┌───────────────────┼───────────────────┐
+         ↓                   ↓                   ↓
+    ┌────────┐          ┌────────┐          ┌──────┐
+    │ Redis  │          │ Database│          │Cache │
+    │ Cache  │          │PostgreSQL          │      │
+    │        │          │                    │      │
+    │ • Position    │ • Devices         │ • Latest    │
+    │   (1 day TTL) │ • Device Positions│   positions │
+    │ • Session     │ • Vehicles        │ • Session   │
+    │   tokens      │ • Users           │   tokens    │
+    │ • Tracking    │ • Geofences       │ • Alerts    │
+    │   state       │ • Alerts          │            │
+    │              │ • Reports         │            │
+    │              │ • Commands        │            │
+    │              │ • Drivers         │            │
+    │              │ • Device Groups   │            │
+    └────────┘          └────────┘          └──────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     CONFIG & INFRASTRUCTURE                                 │
+│                   apps/api/src/config/                                     │
+│                                                                             │
+│  • env.ts — Environment variables (DB_URL, JWT_SECRET, CORS_ORIGIN)       │
+│  • logger.ts — Pino logger setup                                          │
+│  • swagger.ts — Swagger/OpenAPI spec generation                           │
+│  • mqtt.ts — MQTT client connection & message handlers                    │
+│  • redis.ts — Redis connection pool setup                                 │
+│  • websocket.ts — WebSocket server init & broadcast functions            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────────────────
+3. REQUEST FLOW - EXAMPLE: Device Location Update
+───────────────────────────────────────────────────────────────────────────────
+
+SCENARIO: Device sends GPS location data
+
+Option A: Via MQTT (Current)
+─────────────────────────
+1. Device publishes to: mqtt://broker/device/{imei}/position
+   
+2. MQTT client (config/mqtt.ts) receives message
+   
+3. Message handler:
+   • Extracts IMEI from topic
+   • Parses JSON payload
+   • Calls: trackingService.processIncomingLocation(imei, payload)
+   
+4. trackingService (services/tracking.service.ts):
+   • Finds device by IMEI in database
+   • Detects geofence/speed alerts asynchronously
+   • Inserts to device_positions table
+   • Updates lastOnline timestamp
+   • Caches latest position in Redis
+   • Broadcasts via WebSocket
+
+
+Option B: Via REST API (New - to be implemented)
+────────────────────────────────────────────────
+1. Device POSTs to: POST /api/devices/ingest
+   Header: X-Device-API-Key: {key}
+   Body: { imei, latitude, longitude, speed, io_data: {...} }
+   
+2. routes/device.routes.ts handler receives request
+   
+3. Middleware chain:
+   • verifyDeviceApiKey (optional)
+   • validateDevicePayload (Zod validation)
+   • routeDeviceData (staging vs active)
+   
+4. Handler calls: deviceStaging.service.ingestRawDeviceData(...)
+   
+5. Data routed:
+   • If unregistered → INSERT device_staging
+   • If registered → Call trackingService.processIncomingLocation()
+   
+6. Response: 200 { success: true, data: position }
+
+
+WebSocket Real-time Broadcast
+──────────────────────────────
+1. trackingService calls: broadcastLocation(positionData)
+   
+2. config/websocket.ts broadcastLocation():
+   • Iterates all connected WebSocket clients
+   • Sends: { type: 'LOCATION_UPDATE', data: { lat, lng, speed, ... } }
+   
+3. Frontend (admin-web) receives:
+   • Updates Leaflet map markers in real-time
+   • Shows in device list panel
+   • Triggers alert notifications
+
+
+───────────────────────────────────────────────────────────────────────────────
+4. ROUTE STRUCTURE - FILES THAT MANAGE TRAFFIC
+───────────────────────────────────────────────────────────────────────────────
+
+apps/api/src/routes/
+├── index.ts
+│   └─ MAIN ROUTER (mounts all sub-routers)
+│      Imports: auth, device, vehicle, device-group, alert, users, driver,
+│               report-templates, auto-reports, geofence
+│
+├── auth.routes.ts
+│   ├─ POST   /api/auth/login          → user login, JWT token
+│   ├─ POST   /api/auth/refresh        → refresh access token
+│   ├─ POST   /api/auth/logout         → invalidate token
+│   └─ POST   /api/auth/register       → new user registration
+│
+├── device.routes.ts
+│   ├─ GET    /api/devices             → list all devices (paginated)
+│   ├─ POST   /api/devices             → create new device
+│   ├─ GET    /api/devices/{id}        → get device details
+│   ├─ PATCH  /api/devices/{id}        → update device
+│   ├─ DELETE /api/devices/{id}        → delete device
+│   ├─ GET    /api/devices/{id}/position     → latest position (from Redis)
+│   ├─ GET    /api/devices/{id}/positions    → position history (from DB)
+│   ├─ POST   /api/devices/{id}/command      → send command to device
+│   ├─ POST   /api/devices/ingest      → [NEW] TCP data ingestion (no auth)
+│   ├─ GET    /api/devices/scan        → [NEW] scan unregistered devices
+│   └─ POST   /api/devices/register    → [NEW] register from staging
+│
+├── vehicle.routes.ts
+│   ├─ GET    /api/vehicles            → list all vehicles
+│   ├─ POST   /api/vehicles            → create vehicle
+│   ├─ GET    /api/vehicles/{id}       → vehicle details
+│   ├─ PATCH  /api/vehicles/{id}       → update vehicle
+│   └─ DELETE /api/vehicles/{id}       → delete vehicle
+│
+├── geofence.routes.ts
+│   ├─ GET    /api/geofences           → list geofences
+│   ├─ POST   /api/geofences           → create geofence
+│   ├─ GET    /api/geofences/{id}      → geofence details
+│   ├─ PATCH  /api/geofences/{id}      → update geofence
+│   └─ DELETE /api/geofences/{id}      → delete geofence
+│
+├── alert.routes.ts
+│   ├─ GET    /api/alerts              → list alerts
+│   └─ DELETE /api/alerts/{id}         → acknowledge/delete alert
+│
+├── driver.routes.ts
+│   ├─ GET    /api/drivers             → list drivers
+│   ├─ POST   /api/drivers             → create driver
+│   ├─ GET    /api/drivers/{id}        → driver details
+│   ├─ PATCH  /api/drivers/{id}        → update driver
+│   └─ DELETE /api/drivers/{id}        → delete driver
+│
+├── users.routes.ts
+│   ├─ GET    /api/users               → list users (admin only)
+│   ├─ GET    /api/users/{id}          → user profile
+│   ├─ PATCH  /api/users/{id}          → update user
+│   └─ DELETE /api/users/{id}          → delete user (admin)
+│
+├── device-group.routes.ts
+│   ├─ GET    /api/device-groups       → list groups
+│   ├─ POST   /api/device-groups       → create group
+│   ├─ PATCH  /api/device-groups/{id}  → update group
+│   └─ DELETE /api/device-groups/{id}  → delete group
+│
+├── report-templates.routes.ts
+│   ├─ GET    /api/report-templates    → list templates
+│   ├─ POST   /api/report-templates    → create template
+│   ├─ PATCH  /api/report-templates/{id}
+│   └─ DELETE /api/report-templates/{id}
+│
+└── auto-reports.routes.ts
+    ├─ GET    /api/auto-reports        → list auto-reports
+    ├─ POST   /api/auto-reports        → create auto-report
+    ├─ PATCH  /api/auto-reports/{id}   → update auto-report
+    └─ DELETE /api/auto-reports/{id}   → delete auto-report
+
+
+───────────────────────────────────────────────────────────────────────────────
+5. MIDDLEWARE - REQUEST INTERCEPTORS & VALIDATORS
+───────────────────────────────────────────────────────────────────────────────
+
+apps/api/src/middleware/
+├── index.ts
+│   └─ Exports: verifyToken, validate, errorHandler, notFoundHandler
+│
+├── auth.middleware.ts
+│   ├─ verifyToken
+│   │  • Extract JWT from Authorization header
+│   │  • Verify signature against JWT_SECRET
+│   │  • Decode payload: { sub (userId), email, role, orgId }
+│   │  • Attach to req.user
+│   │  • Return 401 if invalid
+│   │
+│   ├─ requireRole(role)
+│   │  • Check req.user.role matches required role
+│   │  • Return 403 Forbidden if not authorized
+│   │
+│   └─ verifyDeviceApiKey (new)
+│      • Extract X-Device-API-Key header
+│      • Validate against DEVICE_API_KEYS env var
+│      • Return 401 if invalid
+│
+├── validate.middleware.ts
+│   ├─ validate(schema)
+│   │  • Zod schema validation on req.body
+│   │  • Return 422 Unprocessable Entity on validation error
+│   │  • Details error array: [{ field, message }]
+│   │
+│   ├─ validateDevicePayload (new)
+│   │  • Parse raw TCP data
+│   │  • Extract IMEI, GPS, IO fields
+│   │  • Normalize to LocationPayload interface
+│   │  • Return 400 if parsing fails
+│   │
+│   └─ validateDeviceRegistration (new)
+│      • Check IMEI not already in devices table (409 Conflict)
+│      • Check IMEI exists in device_staging (404 Not Found)
+│
+└── error.middleware.ts
+    └─ errorHandler(err, req, res, next)
+       • Log error with context (method, path, userId)
+       • Return appropriate HTTP status
+       • Mask error details in production
+       • Types: AppError, ValidationError, DatabaseError, etc
+
+
+───────────────────────────────────────────────────────────────────────────────
+6. DATABASE SCHEMA - FILES MANAGING DATA
+───────────────────────────────────────────────────────────────────────────────
+
+apps/api/src/db/
+├── schema/
+│   ├── index.ts — exports all tables
+│   ├── devices.ts
+│   │   └─ Columns: id, imei (unique), name, model, organizationId, groupId,
+│   │              status, lastOnline, createdAt, updatedAt
+│   │
+│   ├── device-positions.ts
+│   │   └─ Columns: id, deviceId, latitude, longitude, speed, heading,
+│   │              altitude, satellites, gsmSignal, batteryVoltage, accStatus,
+│   │              mileage, timestamp, createdAt
+│   │   └─ [NEW] io_data, fuel_used, fuel_rate, odometer, ignition, movement,
+│   │              battery_current, gsm_operator
+│   │
+│   ├── device-staging.ts (NEW)
+│   │   └─ Columns: id, imei (unique), raw_payload (jsonb), latitude, longitude,
+│   │              last_seen, created_at, expires_at
+│   │   └─ Auto-delete after 7 days
+│   │
+│   ├── vehicles.ts
+│   ├── users.ts
+│   ├── drivers.ts
+│   ├── geofences.ts
+│   ├── alerts.ts
+│   ├── device-commands.ts
+│   ├── device-groups.ts
+│   ├── refresh-tokens.ts
+│   ├── reports.ts
+│   ├── organizations.ts
+│   ├── relations.ts — Drizzle ORM relations (joins)
+│   
+├── index.ts
+│   └─ PostgreSQL connection via drizzle("postgres")
+│
+└── seed.ts
+    └─ Demo data injection (devices, vehicles, drivers, geofences)
+
+
+───────────────────────────────────────────────────────────────────────────────
+7. SERVICES - BUSINESS LOGIC LAYER
+───────────────────────────────────────────────────────────────────────────────
+
+apps/api/src/services/
+├── device.service.ts
+│   ├─ getDevices(page, limit, search, status)      → query devices
+│   ├─ getDeviceById(id)                            → single device
+│   ├─ createDevice(data)                           → register device
+│   ├─ updateDevice(id, data)                       → modify device
+│   └─ deleteDevice(id)                            → remove device
+│
+├── tracking.service.ts
+│   ├─ processIncomingLocation(imei, payload)       → main ingestion logic
+│   ├─ getLatestPosition(deviceId)                  → from Redis cache
+│   ├─ getLatestPositions(deviceIds)                → bulk fetch
+│   └─ getPositionHistory(deviceId, from, to)       → historical data
+│
+├── alert.service.ts
+│   ├─ detectAlerts(device, vehicle, prevPos, curPos)  → geofence/speed check
+│   ├─ createAlert(data)                            → record alert
+│   ├─ getAlerts(filters)                           → list alerts
+│   └─ acknowledgeAlert(id)                         → mark as read
+│
+├── auth.service.ts
+│   ├─ login(email, password)                       → JWT generation
+│   ├─ generateTokens(userId)                       → access + refresh
+│   ├─ verifyToken(token)                           → decode & validate
+│   └─ refreshToken(refreshToken)                   → new access token
+│
+├── device-group.service.ts
+├── vehicle.service.ts
+├── geofence.service.ts
+├── report.service.ts
+├── user.service.ts
+├── driver.service.ts
+├── command.service.ts
+│   └─ sendCommand(deviceId, commandType)           → send to MQTT
+│
+├── device-staging.service.ts (NEW)
+│   ├─ ingestRawDeviceData(imei, payload)           → store in staging
+│   ├─ scanUnregisteredDevices()                    → query device_staging
+│   ├─ registerDevice(imei, name, model)            → move to devices
+│   └─ cleanupExpiredStaging()                      → auto-cleanup (7 days)
+│
+└── index.ts
+    └─ Re-exports all services
+
+
+───────────────────────────────────────────────────────────────────────────────
+8. CONFIG - EXTERNAL DEPENDENCIES & ENV SETUP
+───────────────────────────────────────────────────────────────────────────────
+
+apps/api/src/config/
+├── env.ts
+│   • NODE_ENV (development | production | test)
+│   • PORT (default: 5000)
+│   • DATABASE_URL (PostgreSQL connection string)
+│   • REDIS_URL (Redis connection)
+│   • JWT_SECRET (signing key)
+│   • JWT_EXPIRY (access token lifetime)
+│   • REFRESH_TOKEN_EXPIRY
+│   • CORS_ORIGIN (frontend URL)
+│   • MQTT_URL (MQTT broker)
+│   • DEVICE_API_KEYS (comma-separated)
+│
+├── logger.ts
+│   • Pino logger configuration
+│   • Pretty printing in development
+│   • Structured JSON in production
+│
+├── mqtt.ts
+│   • mqtt.connect() to broker
+│   • Subscribe to topics: device/+/position, command/+/response
+│   • Message handler: extract IMEI, call trackingService
+│   • Publish command responses
+│
+├── redis.ts
+│   • ioredis connection pool
+│   • Error handling & reconnection
+│   • Used for: session tokens, device positions cache
+│
+├── websocket.ts
+│   • WebSocket server over HTTP upgrade
+│   • Subscribe/unsubscribe pattern
+│   • broadcastLocation(data) — send to all connected clients
+│   • Types: LOCATION_UPDATE, ALERT, COMMAND_RESPONSE
+│
+└── swagger.ts
+    • Generates OpenAPI 3.0 spec from JSDoc comments
+    • Serves at: GET /api/docs.json
+    • UI at: GET /api/docs
+
+
+───────────────────────────────────────────────────────────────────────────────
+9. AUTHENTICATION & AUTHORIZATION FLOW
+───────────────────────────────────────────────────────────────────────────────
+
+Login Flow:
+──────────
+1. Client POST /api/auth/login { email, password }
+
+2. auth.service.login():
+   • Fetch user from DB by email
+   • Compare password with bcrypt hash
+   • Generate JWT: auth.generateTokens(userId)
+
+3. JWT payload:
+   {
+     "sub": "user-uuid",           // subject (user ID)
+     "email": "admin@example.com",
+     "role": "admin",              // admin | manager | user
+     "orgId": "org-uuid",
+     "iat": 1234567890,            // issued at
+     "exp": 1234571490             // expires at (1 hour default)
+   }
+
+4. Return response:
+   {
+     "success": true,
+     "data": {
+       "accessToken": "eyJhbGci...",
+       "refreshToken": "eyJhbGci...",
+       "user": { id, email, role }
+     }
+   }
+
+5. Client stores tokens:
+   • accessToken → localStorage or cookie (short-lived, 1h)
+   • refreshToken → secure httpOnly cookie (long-lived, 7d)
+
+
+Protected Route Flow:
+────────────────────
+1. Client makes request with:
+   Header: Authorization: Bearer {accessToken}
+
+2. Middleware: verifyToken
+   • Extract token from Authorization header
+   • Decode JWT using JWT_SECRET
+   • Validate expiry (exp claim)
+   • Attach decoded payload to req.user
+
+3. Route handler:
+   • Access req.user.id, req.user.role, req.user.orgId
+   • Optional: requireRole('admin') for admin-only routes
+
+4. Expired token → 401 Unauthorized
+   • Client uses refreshToken to get new accessToken
+   • POST /api/auth/refresh { refreshToken }
+   • Generate new accessToken (1 hour validity)
+
+
+───────────────────────────────────────────────────────────────────────────────
+10. ERROR HANDLING & RESPONSE FORMAT
+───────────────────────────────────────────────────────────────────────────────
+
+Success Response:
+─────────────────
+HTTP 200 OK
+{
+  "success": true,
+  "data": { ...payload },
+  "message": "Operation successful"
+}
+
+Validation Error Response:
+──────────────────────────
+HTTP 422 Unprocessable Entity
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": [
+      { "field": "email", "message": "Invalid email format" },
+      { "field": "password", "message": "Too short" }
+    ]
+  }
+}
+
+Authorization Error Response:
+─────────────────────────────
+HTTP 401 Unauthorized
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or expired token"
+  }
+}
+
+HTTP 403 Forbidden
+{
+  "success": false,
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Insufficient permissions"
+  }
+}
+
+Server Error Response:
+──────────────────────
+HTTP 500 Internal Server Error
+{
+  "success": false,
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "An unexpected error occurred"
+  }
+}
+
+
+───────────────────────────────────────────────────────────────────────────────
+11. TESTING STRATEGY
+───────────────────────────────────────────────────────────────────────────────
+
+Test Framework: Vitest + Supertest
+
+apps/api/src/test/
+├── setup.ts
+│   • Global test configuration
+│   • Mock db, logger, WebSocket, MQTT
+│   • Auth middleware mock (returns hardcoded user)
+│
+├── routes/
+│   ├── device.routes.test.ts (158 tests)
+│   │   • GET /devices — list, pagination, filtering
+│   │   • POST /devices — create with validation
+│   │   • PATCH /devices/{id} — update
+│   │   • GET /devices/{id}/position — latest position
+│   │   • GET /devices/{id}/positions — history with date range
+│   │   • POST /devices/{id}/command — send command
+│   │   • [NEW] POST /devices/ingest → device_staging
+│   │   • [NEW] GET /devices/scan → unregistered devices
+│   │   • [NEW] POST /devices/register → move to active
+│   │
+│   ├── alert.routes.test.ts
+│   ├── auth.routes.test.ts
+│   ├── vehicle.routes.test.ts
+│   └── ... (other route tests)
+│
+└── services/
+    ├── tracking.service.test.ts
+    │   • processIncomingLocation() → MQTT to DB
+    │   • getLatestPosition() → Redis fallback to DB
+    │   • getPositionHistory() → date range queries
+    │
+    ├── auth.service.test.ts
+    └── ... (other service tests)
+
+Run Tests:
+──────────
+pnpm --filter @iot-platform/api test              # all tests once
+pnpm --filter @iot-platform/api test:watch        # watch mode
+pnpm --filter @iot-platform/api test:coverage     # with coverage report
+
+
+───────────────────────────────────────────────────────────────────────────────
+12. KEY DEVELOPMENT COMMANDS
+───────────────────────────────────────────────────────────────────────────────
+
+Development:
+  pnpm --filter @iot-platform/api dev              # start dev server (tsx watch)
+  pnpm --filter @iot-platform/api build            # compile TypeScript
+
+Database:
+  pnpm --filter @iot-platform/api db:push          # apply schema to DB
+  pnpm --filter @iot-platform/api db:seed          # inject demo data
+  pnpm --filter @iot-platform/api db:studio        # visual database explorer
+
+Testing:
+  pnpm --filter @iot-platform/api test             # run all tests
+  pnpm --filter @iot-platform/api test:watch       # watch mode
+  pnpm --filter @iot-platform/api test:coverage    # coverage report
+
+From root (monorepo):
+  pnpm dev                                          # start both API + frontend
+  pnpm build                                        # build both apps
+
+
+───────────────────────────────────────────────────────────────────────────────
+13. IMPORTANT FILES SUMMARY
+───────────────────────────────────────────────────────────────────────────────
+
+ENTRY POINT:
+  apps/api/src/index.ts                           — Server startup, middleware setup
+
+MAIN ROUTER:
+  apps/api/src/routes/index.ts                    — Mount all sub-routers
+
+TRAFFIC MANAGEMENT (Route Handlers):
+  apps/api/src/routes/device.routes.ts            — Device endpoints (main traffic)
+  apps/api/src/routes/auth.routes.ts              — Authentication
+  apps/api/src/routes/vehicle.routes.ts           — Vehicle management
+  apps/api/src/routes/geofence.routes.ts          — Geofence operations
+  apps/api/src/routes/alert.routes.ts             — Alert management
+  apps/api/src/routes/driver.routes.ts            — Driver operations
+  apps/api/src/routes/auto-reports.routes.ts      — Report generation
+
+REQUEST INTERCEPTORS (Middleware):
+  apps/api/src/middleware/auth.middleware.ts      — JWT verification
+  apps/api/src/middleware/validate.middleware.ts  — Zod schema validation
+  apps/api/src/middleware/error.middleware.ts     — Global error handler
+
+BUSINESS LOGIC (Services):
+  apps/api/src/services/tracking.service.ts       — GPS data processing (core)
+  apps/api/src/services/auth.service.ts           — JWT token logic
+  apps/api/src/services/device.service.ts         — Device CRUD
+  apps/api/src/services/alert.service.ts          — Alert detection
+  apps/api/src/services/device-staging.service.ts — [NEW] Staging buffer
+
+REAL-TIME:
+  apps/api/src/config/websocket.ts                — WebSocket server (location updates)
+  apps/api/src/config/mqtt.ts                     — MQTT broker connection
+  apps/api/src/config/redis.ts                    — Redis cache
+
+DATA ACCESS:
+  apps/api/src/db/index.ts                        — PostgreSQL connection
+  apps/api/src/db/schema/device-positions.ts      — Position storage schema
+  apps/api/src/db/schema/device-staging.ts        — [NEW] Staging buffer schema
+  apps/api/src/db/schema/devices.ts               — Device registry
+  apps/api/src/db/schema/geofences.ts             — Geofence zones
+
+
+───────────────────────────────────────────────────────────────────────────────
+14. QUICK START FOR NEW BACKEND DEVELOPERS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Install dependencies:
+   pnpm install
+
+2. Setup environment:
+   Create .env.local in apps/api/:
+   DATABASE_URL=postgres://iot_admin:iot_secret@localhost:5432/iot_platform
+   REDIS_URL=redis://localhost:6379
+   JWT_SECRET=your_secret_key_here
+   MQTT_URL=mqtt://localhost:1883
+
+3. Start services (PostgreSQL, Redis, MQTT):
+   docker-compose up -d
+
+4. Initialize database:
+   pnpm --filter @iot-platform/api db:push
+   pnpm --filter @iot-platform/api db:seed
+
+5. Start development server:
+   pnpm --filter @iot-platform/api dev
+   Server runs at: http://localhost:5000
+   Swagger docs at: http://localhost:5000/api/docs
+
+6. Make your first request:
+   POST http://localhost:5000/api/auth/login
+   {
+     "email": "admin@example.com",
+     "password": "admin123"
+   }
+   
+   Response:
+   {
+     "success": true,
+     "data": {
+       "accessToken": "eyJhbGci...",
+       "refreshToken": "eyJhbGci...",
+       "user": { "id": "...", "email": "admin@example.com", "role": "admin" }
+     }
+   }
+
+7. Use token for authenticated requests:
+   GET http://localhost:5000/api/devices
+   Header: Authorization: Bearer eyJhbGci...
+
+
+───────────────────────────────────────────────────────────────────────────────
+15. ARCHITECTURE DECISION RECORDS (ADRs)
+───────────────────────────────────────────────────────────────────────────────
+
+Why Drizzle ORM?
+  • TypeScript-first, zero runtime overhead
+  • Type-safe queries at compile time
+  • Single schema definition (no separate migrations)
+  • Better IDE autocomplete
+
+Why Redis for position cache?
+  • Sub-millisecond latency for "current location" queries
+  • Reduces database load for frequently accessed positions
+  • TTL auto-expiry (1 day)
+  • Atomic operations for tracking state
+
+Why MQTT + WebSocket?
+  • MQTT: Reliable device-to-server messaging with QoS
+  • WebSocket: Real-time server-to-client broadcasts
+  • Both are industry standards in IoT platforms
+
+Why Zod validation?
+  • Runtime type checking (not just TypeScript compile-time)
+  • Detailed error messages for API clients
+  • Declarative schema definitions
+
+Why Pino logger?
+  • Structured JSON logging (easier parsing in production)
+  • Fast performance (minimal overhead)
+  • Levels: debug, info, warn, error, fatal
+
+Why JWT (no sessions)?
+  • Stateless authentication (scales horizontally)
+  • No server-side session storage needed
+  • Works well with SPAs and mobile clients
+  • Industry standard
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              NEXT STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+Phase 1 (This Sprint):
+  [ ] Extend device-positions schema with IO fields (fuel, odometer, etc)
+  [ ] Create device-staging schema & migrations
+  [ ] Implement POST /api/devices/ingest endpoint
+  [ ] Implement GET /api/devices/scan endpoint
+  [ ] Implement POST /api/devices/register endpoint
+  [ ] Update processIncomingLocation() to handle IO data
+  [ ] Add unit & integration tests
+  [ ] Update Swagger documentation
+
+Phase 2:
+  [ ] Frontend: Add "Scan Devices" UI on Device List page
+  [ ] Frontend: Implement device registration flow
+  [ ] Add device staging auto-cleanup cron job
+  [ ] Add device API key authentication
+
+Phase 3:
+  [ ] Add more device commands (restart, set_interval, set_apn)
+  [ ] Implement device firmware OTA updates
+  [ ] Add device telemetry dashboard
+
+═══════════════════════════════════════════════════════════════════════════════

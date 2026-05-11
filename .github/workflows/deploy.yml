@@ -1,0 +1,45 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: SSH Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_PORT }}
+          script: |
+            set -e
+
+            PROJECT_PATH="${{ secrets.VM_PROJECT_PATH }}"
+            REPO_URL="https://github.com/${{ secrets.GITHUB_REPO }}.git"
+
+            if [ ! -d "$PROJECT_PATH/.git" ]; then
+              echo "==> No git repo found, cloning fresh..."
+              git clone "$REPO_URL" "$PROJECT_PATH"
+            fi
+
+            cd "$PROJECT_PATH"
+
+            echo "==> Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Building & restarting containers..."
+            docker compose up --build -d
+
+            echo "==> Cleaning up unused images..."
+            docker image prune -f
+
+            echo "==> Deploy complete!"
+            docker compose ps

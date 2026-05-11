@@ -1,0 +1,21 @@
+import type { Vehicle, VehicleListResponse } from '../types/vehicle';
+
+const NOW = new Date().toISOString();
+
+export const DUMMY_VEHICLES: Vehicle[] = [
+  { id: 'dummy-veh-01', plateNo: 'B 1234 ABC', type: 'truck', make: 'Hino', model: 'Ranger FG 235 JJ', maxSpeed: 100, vin: 'JHFJF8EV1AX000001', sn: 'SN-001', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2026-12-31', accumulatedMileage: 85420, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-02', plateNo: 'B 5678 DEF', type: 'truck', make: 'Mitsubishi', model: 'Fuso FN 527', maxSpeed: 90, vin: 'JHFJF8EV1AX000002', sn: 'SN-002', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2026-06-30', accumulatedMileage: 62100, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-03', plateNo: 'D 1122 GHI', type: 'van', make: 'Toyota', model: 'Hi-Ace', maxSpeed: 120, vin: 'JHFJF8EV1AX000003', sn: 'SN-003', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2027-03-15', accumulatedMileage: 38750, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-04', plateNo: 'L 3344 JKL', type: 'truck', make: 'Isuzu', model: 'Giga FVZ', maxSpeed: 90, vin: 'JHFJF8EV1AX000004', sn: 'SN-004', deviceId: null, status: 'active', insuranceStatus: 'expiring_soon', insuranceExpiry: '2025-06-01', accumulatedMileage: 120850, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-05', plateNo: 'B 7788 MNO', type: 'car', make: 'Toyota', model: 'Innova Zenix', maxSpeed: 150, vin: 'JHFJF8EV1AX000005', sn: 'SN-005', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2027-08-20', accumulatedMileage: 25340, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-06', plateNo: 'BM 9900 PQR', type: 'bus', make: 'Scania', model: 'Touring HD', maxSpeed: 100, vin: 'JHFJF8EV1AX000006', sn: 'SN-006', deviceId: null, status: 'maintenance', insuranceStatus: 'active', insuranceExpiry: '2026-11-10', accumulatedMileage: 280300, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-07', plateNo: 'N 2211 STU', type: 'truck', make: 'Hino', model: '500 Series FM 260 JD', maxSpeed: 90, vin: 'JHFJF8EV1AX000007', sn: 'SN-007', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2026-09-01', accumulatedMileage: 97500, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-08', plateNo: 'KB 4455 VWX', type: 'van', make: 'Daihatsu', model: 'Gran Max', maxSpeed: 120, vin: 'JHFJF8EV1AX000008', sn: 'SN-008', deviceId: null, status: 'inactive', insuranceStatus: 'expired', insuranceExpiry: '2024-12-31', accumulatedMileage: 54200, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-09', plateNo: 'DK 6677 YZA', type: 'truck', make: 'Mercedes-Benz', model: 'Axor 2528', maxSpeed: 100, vin: 'JHFJF8EV1AX000009', sn: 'SN-009', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2027-01-30', accumulatedMileage: 43800, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+  { id: 'dummy-veh-10', plateNo: 'DD 8899 BCD', type: 'truck', make: 'Mitsubishi', model: 'Colt Diesel FE 74', maxSpeed: 80, vin: 'JHFJF8EV1AX000010', sn: 'SN-010', deviceId: null, status: 'active', insuranceStatus: 'active', insuranceExpiry: '2026-07-15', accumulatedMileage: 71600, ownerName: 'PT Demo Transport', ownerPhone: '021-5556677', organizationId: null, createdAt: NOW, updatedAt: NOW },
+];
+
+export const DUMMY_VEHICLE_RESPONSE: VehicleListResponse = {
+  data: DUMMY_VEHICLES,
+  meta: { page: 1, limit: 100, total: DUMMY_VEHICLES.length, totalPages: 1 },
+};

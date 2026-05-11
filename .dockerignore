@@ -1,0 +1,29 @@
+# Exclude local node_modules — Docker installs its own inside the container
+**/node_modules
+**/.pnpm-store
+
+# Build artifacts (will be rebuilt inside Docker)
+**/dist
+**/.turbo
+
+# Dev & test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/coverage
+
+# Git & IDE
+.git
+.gitignore
+.github
+.vscode
+
+# Env files (passed via docker-compose environment)
+.env
+.env.local
+.env.*.local
+
+# Docs
+*.md
+LICENSE
