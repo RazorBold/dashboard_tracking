@@ -236,7 +236,11 @@ deviceRouter.post(
   validate(createDeviceSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const device = await deviceService.createDevice(req.body);
+      const organizationId =
+        req.user?.role === 'super_admin'
+          ? req.body.organizationId
+          : req.user?.orgId;
+      const device = await deviceService.createDevice({ ...req.body, organizationId });
       res.status(201).json({ success: true, message: 'Device created', data: device });
     } catch (err) {
       next(err);
