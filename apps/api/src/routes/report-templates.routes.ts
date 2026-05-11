@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { verifyToken } from '../middleware/auth.middleware';
 import * as reportService from '../services/report.service';
 
-const router = Router();
+const router: Router = Router();
 router.use(verifyToken);
 
 function resolveOrgId(req: any): string | null {

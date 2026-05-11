@@ -4,7 +4,7 @@ import { db } from '../db';
 import { alerts } from '../db/schema';
 import { eq, desc, and, count, SQL } from 'drizzle-orm';
 
-const router = Router();
+const router: Router = Router();
 router.use(verifyToken);
 
 /**

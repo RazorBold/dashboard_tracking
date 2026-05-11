@@ -5,7 +5,7 @@ import { verifyToken } from '../middleware/auth.middleware';
 import { db } from '../db';
 import { drivers } from '../db/schema';
 
-const router = Router();
+const router: Router = Router();
 router.use(verifyToken);
 
 function resolveOrgId(req: any): string | null {
@@ -326,4 +326,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-export const driverRouter = router;
+export const driverRouter: Router = router;

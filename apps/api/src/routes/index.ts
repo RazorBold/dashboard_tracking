@@ -11,7 +11,7 @@ import { autoReportsRouter } from './auto-reports.routes';
 import { geofenceRouter } from './geofence.routes';
 import { obdRouter } from './obd.routes';
 
-export const apiRouter = Router();
+export const apiRouter: Router = Router();
 
 // ─── Mount sub-routers ────────────────────────────────
 apiRouter.use('/auth', authRouter);

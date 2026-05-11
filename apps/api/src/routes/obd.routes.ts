@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { verifyToken } from '../middleware/auth.middleware';
 import * as obdService from '../services/obd.service';
 
-const router = Router({ mergeParams: true }); // mergeParams: deviceId comes from parent
+const router: Router = Router({ mergeParams: true }); // mergeParams: deviceId comes from parent
 router.use(verifyToken);
 
 /**

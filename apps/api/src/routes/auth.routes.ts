@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validate, verifyToken } from '../middleware';
 import * as authService from '../services/auth.service';
 
-export const authRouter = Router();
+export const authRouter: Router = Router();
 
 // ─── Validation Schemas ───────────────────────────────
 const registerSchema = z.object({

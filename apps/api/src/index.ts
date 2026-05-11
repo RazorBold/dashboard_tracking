@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -12,7 +12,7 @@ import { apiRouter } from './routes';
 import { notFoundHandler, errorHandler } from './middleware';
 
 // ─── App Instance ─────────────────────────────────────
-const app = express();
+const app: Express = express();
 
 // ─── Security & Compression ───────────────────────────
 app.use(

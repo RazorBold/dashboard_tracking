@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validate, verifyToken, requireRole } from '../middleware';
 import * as userService from '../services/user.service';
 
-export const usersRouter = Router();
+export const usersRouter: Router = Router();
 usersRouter.use(verifyToken);
 
 /**

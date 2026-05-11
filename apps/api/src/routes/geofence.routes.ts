@@ -8,7 +8,7 @@ function resolveOrgId(req: any): string | null {
   return req.user?.orgId ?? null;
 }
 
-const router = Router();
+const router: Router = Router();
 router.use(verifyToken);
 
 /**
