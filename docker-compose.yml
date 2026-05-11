@@ -34,28 +34,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Message Broker (RabbitMQ) ──────────────────────
-  iot-rabbitmq:
-    image: rabbitmq:3-management
-    container_name: iot-rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"    # AMQP — API server connects here
-      - "15672:15672"  # Management UI — http://localhost:15672
-      - "14378:1883"   # MQTT — IoT devices connect here (via rabbitmq_mqtt plugin)
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
-    volumes:
-      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
   # ─── API Backend ────────────────────────────────────
   iot-api:
     build:
@@ -63,14 +41,14 @@ services:
       dockerfile: ./docker/api/Dockerfile
     container_name: iot-api
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-iot_admin}:${POSTGRES_PASSWORD:-iot_secret}@iot-postgres:5432/${POSTGRES_DB:-iot_platform}
       REDIS_URL: redis://iot-redis:6379
-      RABBITMQ_URL: amqp://admin:admin123@iot-rabbitmq:5672
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@host.docker.internal:5672}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change_me_super_secret_access_key_at_least_32ch}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_super_secret_refresh_key_at_least_32c}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
@@ -82,8 +60,6 @@ services:
         condition: service_healthy
       iot-redis:
         condition: service_healthy
-      iot-rabbitmq:
-        condition: service_healthy
 
   # ─── Admin Web ──────────────────────────────────────
   iot-admin-web:
@@ -92,8 +68,6 @@ services:
       dockerfile: ./docker/admin-web/Dockerfile
     container_name: iot-admin-web
     restart: unless-stopped
-    ports:
-      - "5173:80"
     depends_on:
       - iot-api
 
@@ -104,8 +78,6 @@ services:
       dockerfile: ./docker/tenant-web/Dockerfile
     container_name: iot-tenant-web
     restart: unless-stopped
-    ports:
-      - "5174:80"
     depends_on:
       - iot-api
 
@@ -126,4 +98,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  rabbitmq_data:
