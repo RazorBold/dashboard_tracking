@@ -66,7 +66,7 @@ RabbitMQ dikonfigurasi dengan MQTT plugin. Device terkoneksi via MQTT, bukan lan
 | Parameter     | Value                            |
 |---------------|----------------------------------|
 | Host          | `localhost` (atau IP server)     |
-| Port MQTT     | `1883`                           |
+| Port MQTT     | `14378`                          |
 | Port MQTT TLS | `8883`                           |
 | Username      | MQTT credentials dari RabbitMQ   |
 | Password      | MQTT credentials dari RabbitMQ   |

@@ -44,7 +44,7 @@ services:
     ports:
       - "5672:5672"    # AMQP — API server connects here
       - "15672:15672"  # Management UI — http://localhost:15672
-      - "1883:1883"    # MQTT — IoT devices connect here (via rabbitmq_mqtt plugin)
+      - "14378:1883"   # MQTT — IoT devices connect here (via rabbitmq_mqtt plugin)
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
@@ -117,7 +117,7 @@ services:
     container_name: iot-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "14376:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
