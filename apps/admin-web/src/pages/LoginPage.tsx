@@ -3,20 +3,171 @@ import { useNavigate } from 'react-router-dom';
 import { LoginForm } from '../components/LoginForm';
 import { useAuthStore } from '../stores/authStore';
 
-// ── Animated background dots ─────────────────────────────
-const DOT_POSITIONS = [
-  { cx: 60,  cy: 40  }, { cx: 180, cy: 80  }, { cx: 320, cy: 30  },
-  { cx: 420, cy: 100 }, { cx: 80,  cy: 160 }, { cx: 260, cy: 140 },
-  { cx: 380, cy: 200 }, { cx: 140, cy: 260 }, { cx: 300, cy: 300 },
-  { cx: 460, cy: 260 }, { cx: 40,  cy: 340 }, { cx: 200, cy: 380 },
-  { cx: 350, cy: 360 }, { cx: 100, cy: 440 }, { cx: 440, cy: 420 },
-  { cx: 240, cy: 460 }, { cx: 60,  cy: 500 }, { cx: 400, cy: 500 },
+const R = 160;
+const CX = 200;
+const CY = 200;
+
+// Latitude lines: y position and ellipse rx
+const LAT_LINES = [-65, -45, -25, 0, 25, 45, 65].map((deg) => {
+  const rad = (deg * Math.PI) / 180;
+  const y   = CY - R * Math.sin(rad);
+  const rx  = R * Math.cos(rad);
+  return { y, rx, ry: Math.max(rx * 0.08, 1) };
+});
+
+// Location markers [x%, y%] relative to globe center
+const MARKERS = [
+  { x: CX - 40, y: CY - 30, delay: 0,    color: '#34d399' }, // Jakarta area
+  { x: CX + 60, y: CY - 60, delay: 0.6,  color: '#60a5fa' }, // East
+  { x: CX - 90, y: CY + 20, delay: 1.2,  color: '#f59e0b' }, // West
+  { x: CX + 20, y: CY + 50, delay: 1.8,  color: '#a78bfa' }, // South-east
+  { x: CX - 10, y: CY - 80, delay: 2.4,  color: '#34d399' }, // North
 ];
 
-const CONNECTIONS = [
-  [0,1],[1,2],[2,3],[1,5],[5,6],[4,5],[5,8],[8,9],[7,8],
-  [8,11],[11,12],[10,11],[11,14],[13,14],[14,16],[12,15],[15,16],
+// Arc connections between markers
+const ARCS = [
+  { x1: CX-40, y1: CY-30, x2: CX+60, y2: CY-60, cpx: CX+15, cpy: CY-100 },
+  { x1: CX-40, y1: CY-30, x2: CX-90, y2: CY+20, cpx: CX-90, cpy: CY-50  },
+  { x1: CX+60, y1: CY-60, x2: CX+20, y2: CY+50, cpx: CX+90, cpy: CY     },
 ];
+
+function Globe() {
+  return (
+    <svg viewBox="0 0 400 400" className="lp-globe-svg" aria-hidden>
+      <defs>
+        {/* Sphere fill gradient — light source top-left */}
+        <radialGradient id="g-sphere" cx="36%" cy="32%" r="68%">
+          <stop offset="0%"   stopColor="#2563eb" stopOpacity="1" />
+          <stop offset="45%"  stopColor="#1d4ed8" stopOpacity="1" />
+          <stop offset="100%" stopColor="#060f2e" stopOpacity="1" />
+        </radialGradient>
+
+        {/* Atmosphere halo */}
+        <radialGradient id="g-atmos" cx="50%" cy="50%" r="50%">
+          <stop offset="72%" stopColor="transparent" />
+          <stop offset="100%" stopColor="rgba(96,165,250,0.35)" />
+        </radialGradient>
+
+        {/* Specular highlight */}
+        <radialGradient id="g-shine" cx="35%" cy="28%" r="45%">
+          <stop offset="0%"   stopColor="rgba(255,255,255,0.18)" />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+
+        {/* Edge darkening */}
+        <radialGradient id="g-edge" cx="50%" cy="50%" r="50%">
+          <stop offset="60%" stopColor="transparent" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.55)" />
+        </radialGradient>
+
+        {/* Clip to sphere */}
+        <clipPath id="sphere-clip">
+          <circle cx={CX} cy={CY} r={R} />
+        </clipPath>
+
+        {/* Glow filter for markers */}
+        <filter id="f-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* Soft blur for atmosphere */}
+        <filter id="f-atmos" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+
+        {/* Arc dash animation */}
+        <style>{`
+          .lp-lng-group { animation: globe-spin 18s linear infinite; transform-origin: ${CX}px ${CY}px; }
+          .lp-arc       { stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw-arc 3s ease forwards; }
+          .lp-arc-1 { animation-delay: 0.3s; }
+          .lp-arc-2 { animation-delay: 0.9s; }
+          .lp-arc-3 { animation-delay: 1.5s; }
+          @keyframes globe-spin    { to { transform: rotate(360deg); } }
+          @keyframes draw-arc      { to { stroke-dashoffset: 0; } }
+          @keyframes lp-ping       { 0%,100% { transform: scale(1); opacity:.7; } 50% { transform: scale(2.4); opacity:0; } }
+          @keyframes lp-float      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+          @keyframes lp-sparkle    { 0%,100% { opacity:.15; } 50% { opacity:.55; } }
+        `}</style>
+      </defs>
+
+      {/* ── Outer atmosphere glow ── */}
+      <circle cx={CX} cy={CY} r={180} fill="rgba(59,130,246,0.12)" filter="url(#f-atmos)" />
+      <circle cx={CX} cy={CY} r={168} fill="none" stroke="rgba(96,165,250,0.2)" strokeWidth="2" />
+
+      {/* ── Sphere base ── */}
+      <circle cx={CX} cy={CY} r={R} fill="url(#g-sphere)" />
+
+      {/* ── Grid lines (clipped to sphere) ── */}
+      <g clipPath="url(#sphere-clip)">
+        {/* Latitude lines — static */}
+        <g fill="none" stroke="rgba(147,197,253,0.22)" strokeWidth="0.8">
+          {LAT_LINES.map(({ y, rx, ry }, i) => (
+            <ellipse key={i} cx={CX} cy={y} rx={rx} ry={ry} />
+          ))}
+        </g>
+
+        {/* Longitude lines — slowly rotating */}
+        <g className="lp-lng-group" fill="none" stroke="rgba(147,197,253,0.18)" strokeWidth="0.8">
+          {[0, 30, 60, 90, 120, 150].map((angle, i) => (
+            <ellipse key={i} cx={CX} cy={CY} rx={18} ry={R}
+              transform={`rotate(${angle} ${CX} ${CY})`} />
+          ))}
+        </g>
+      </g>
+
+      {/* ── Specular highlight (top-left) ── */}
+      <circle cx={CX} cy={CY} r={R} fill="url(#g-shine)" clipPath="url(#sphere-clip)" />
+
+      {/* ── Edge darkening ── */}
+      <circle cx={CX} cy={CY} r={R} fill="url(#g-edge)" />
+
+      {/* ── Atmosphere overlay ── */}
+      <circle cx={CX} cy={CY} r={R} fill="url(#g-atmos)" />
+
+      {/* ── Arc connections ── */}
+      {ARCS.map(({ x1, y1, x2, y2, cpx, cpy }, i) => (
+        <path
+          key={i}
+          className={`lp-arc lp-arc-${i + 1}`}
+          d={`M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`}
+          fill="none"
+          stroke="rgba(96,165,250,0.55)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+      ))}
+
+      {/* ── Location markers ── */}
+      {MARKERS.map((m, i) => (
+        <g key={i} filter="url(#f-glow)">
+          {/* Ping ring */}
+          <circle cx={m.x} cy={m.y} r="12" fill="none"
+            stroke={m.color} strokeWidth="1"
+            style={{ animation: `lp-ping 2.4s ease-out ${m.delay}s infinite` }}
+          />
+          {/* Dot */}
+          <circle cx={m.x} cy={m.y} r="4" fill={m.color} />
+          <circle cx={m.x} cy={m.y} r="2" fill="white" opacity="0.8" />
+        </g>
+      ))}
+
+      {/* ── Sparkle stars around globe ── */}
+      {[
+        {cx:50,  cy:80},  {cx:340, cy:60},  {cx:30,  cy:300},
+        {cx:360, cy:320}, {cx:120, cy:30},  {cx:280, cy:370},
+        {cx:380, cy:180}, {cx:20,  cy:190},
+      ].map((s, i) => (
+        <circle key={i} cx={s.cx} cy={s.cy} r="1.5" fill="white"
+          style={{ animation: `lp-sparkle ${2 + i * 0.4}s ease-in-out ${i * 0.3}s infinite` }}
+        />
+      ))}
+    </svg>
+  );
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -27,214 +178,178 @@ export function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <div className="login-root">
-      {/* ── Left Panel ── */}
-      <div className="login-left">
-        {/* Animated network map background */}
-        <svg className="login-bg-svg" viewBox="0 0 500 540" preserveAspectRatio="xMidYMid slice">
-          {CONNECTIONS.map(([a, b], i) => (
-            <line
-              key={i}
-              x1={DOT_POSITIONS[a].cx} y1={DOT_POSITIONS[a].cy}
-              x2={DOT_POSITIONS[b].cx} y2={DOT_POSITIONS[b].cy}
-              stroke="rgba(99,179,237,0.18)" strokeWidth="1"
-            />
-          ))}
-          {DOT_POSITIONS.map((d, i) => (
-            <circle key={i} cx={d.cx} cy={d.cy} r={i % 4 === 0 ? 4 : 2.5}
-              fill={i % 4 === 0 ? 'rgba(99,179,237,0.55)' : 'rgba(99,179,237,0.3)'}
-            />
-          ))}
-          {/* Active "vehicle" pings */}
-          {[1, 5, 8, 12].map((i) => (
-            <circle key={`ping-${i}`} cx={DOT_POSITIONS[i].cx} cy={DOT_POSITIONS[i].cy}
-              r="8" fill="none" stroke="rgba(96,165,250,0.6)" strokeWidth="1.5"
-              style={{ animation: `ping 2.5s ease-out ${i * 0.5}s infinite` }}
-            />
-          ))}
-        </svg>
+    <div className="lp-root">
 
-        {/* Content */}
-        <div className="login-left-content">
+      {/* ── Left Panel ── */}
+      <div className="lp-left">
+        {/* Star field background */}
+        <div className="lp-stars" aria-hidden />
+
+        <div className="lp-left-inner" style={{ animation: 'lp-float 6s ease-in-out infinite' }}>
           {/* Brand */}
-          <div className="login-brand">
-            <div className="login-brand-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="lp-brand">
+            <div className="lp-brand-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
                 <circle cx="12" cy="9" r="2.5"/>
               </svg>
             </div>
-            <span className="login-brand-name">IoT Tracking</span>
+            <span className="lp-brand-name">IoT Tracking</span>
           </div>
 
-          {/* Hero illustration */}
-          <div className="login-hero">
-            <svg viewBox="0 0 260 200" fill="none" className="login-hero-svg">
-              {/* Road */}
-              <path d="M10 160 Q130 100 250 160" stroke="rgba(255,255,255,0.15)" strokeWidth="28" strokeLinecap="round"/>
-              <path d="M10 160 Q130 100 250 160" stroke="rgba(255,255,255,0.08)" strokeWidth="30" strokeLinecap="round"/>
-              {/* Road dashes */}
-              <path d="M80 133 Q100 124 120 118" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeDasharray="8 8"/>
-              {/* Vehicle 1 */}
-              <g transform="translate(95,112) rotate(-12)">
-                <rect x="-14" y="-8" width="28" height="16" rx="4" fill="#3b82f6"/>
-                <rect x="-10" y="-12" width="20" height="10" rx="3" fill="#60a5fa"/>
-                <circle cx="-8" cy="9" r="4" fill="#1e293b"/>
-                <circle cx="8"  cy="9" r="4" fill="#1e293b"/>
-                <circle cx="-8" cy="9" r="2" fill="#475569"/>
-                <circle cx="8"  cy="9" r="2" fill="#475569"/>
-                <rect x="4" y="-7" width="5" height="4" rx="1" fill="#bfdbfe" opacity="0.9"/>
-              </g>
-              {/* Vehicle 2 */}
-              <g transform="translate(155,118) rotate(-8)">
-                <rect x="-12" y="-7" width="24" height="14" rx="3" fill="#10b981"/>
-                <rect x="-8"  y="-11" width="16" height="9"  rx="2" fill="#34d399"/>
-                <circle cx="-6" cy="8" r="3.5" fill="#1e293b"/>
-                <circle cx="6"  cy="8" r="3.5" fill="#1e293b"/>
-                <circle cx="-6" cy="8" r="1.5" fill="#475569"/>
-                <circle cx="6"  cy="8" r="1.5" fill="#475569"/>
-              </g>
-              {/* Map pins */}
-              <g transform="translate(60,60)">
-                <circle cx="0" cy="0" r="10" fill="#f59e0b" opacity="0.9"/>
-                <path d="M0 10 L0 20" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-                <circle cx="0" cy="0" r="4" fill="white"/>
-              </g>
-              <g transform="translate(195,50)">
-                <circle cx="0" cy="0" r="8" fill="#ef4444" opacity="0.9"/>
-                <path d="M0 8 L0 18" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="0" cy="0" r="3" fill="white"/>
-              </g>
-              {/* Route line */}
-              <path d="M60 60 Q110 40 195 50" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="5 5"/>
-              {/* Signal rings */}
-              <circle cx="60" cy="60" r="18" fill="none" stroke="#f59e0b" strokeWidth="1" opacity="0.4"
-                style={{animation:'ping 2s ease-out 0s infinite'}}/>
-              <circle cx="195" cy="50" r="14" fill="none" stroke="#ef4444" strokeWidth="1" opacity="0.4"
-                style={{animation:'ping 2s ease-out 0.7s infinite'}}/>
-            </svg>
-          </div>
+          {/* Globe */}
+          <Globe />
 
-          {/* Headline */}
-          <h2 className="login-headline">Real-time Fleet Tracking</h2>
-          <p className="login-subheadline">
-            Monitor vehicles, assets &amp; IoT devices<br/>from a single unified dashboard.
+          {/* Copy */}
+          <h2 className="lp-headline">Real-time Fleet Tracking</h2>
+          <p className="lp-sub">
+            Monitor vehicles, assets &amp; IoT devices<br />from a single unified platform.
           </p>
 
           {/* Stats */}
-          <div className="login-stats">
-            <div className="login-stat">
-              <span className="login-stat-value">25K+</span>
-              <span className="login-stat-label">Devices</span>
-            </div>
-            <div className="login-stat-divider"/>
-            <div className="login-stat">
-              <span className="login-stat-value">99.9%</span>
-              <span className="login-stat-label">Uptime</span>
-            </div>
-            <div className="login-stat-divider"/>
-            <div className="login-stat">
-              <span className="login-stat-value">Live</span>
-              <span className="login-stat-label">Real-time</span>
-            </div>
+          <div className="lp-stats">
+            {[
+              { val: '25K+',  label: 'Devices'   },
+              { val: '99.9%', label: 'Uptime'     },
+              { val: 'Live',  label: 'Real-time'  },
+            ].map((s, i) => (
+              <div key={i} className="lp-stat">
+                <span className="lp-stat-val">{s.val}</span>
+                <span className="lp-stat-label">{s.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* ── Right Panel ── */}
-      <div className="login-right">
-        <div className="login-form-card">
+      <div className="lp-right">
+        <div className="lp-form-card">
           <LoginForm />
         </div>
       </div>
 
       <style>{`
-        @keyframes ping {
-          0%   { transform: scale(1);   opacity: 0.7; }
-          100% { transform: scale(2.2); opacity: 0; }
-        }
-
-        .login-root {
+        /* ── Root ── */
+        .lp-root {
           min-height: 100vh;
           display: flex;
           font-family: 'Inter', system-ui, sans-serif;
-          background: #0f172a;
+          background: #060f2e;
         }
 
         /* ── Left ── */
-        .login-left {
+        .lp-left {
           display: none;
           position: relative;
           overflow: hidden;
-          background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #0f2044 100%);
+          background: radial-gradient(ellipse at 40% 40%, #0d1f5c 0%, #060f2e 70%);
         }
         @media (min-width: 1024px) {
-          .login-left { display: flex; flex: 1; align-items: center; justify-content: center; }
+          .lp-left {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+          }
         }
 
-        .login-bg-svg {
+        /* Star field */
+        .lp-stars {
           position: absolute;
           inset: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0.7;
+          background-image:
+            radial-gradient(1px 1px at 10%  15%, rgba(255,255,255,.55) 0%, transparent 0%),
+            radial-gradient(1px 1px at 25%  60%, rgba(255,255,255,.4)  0%, transparent 0%),
+            radial-gradient(1px 1px at 40%  25%, rgba(255,255,255,.5)  0%, transparent 0%),
+            radial-gradient(1px 1px at 60%  75%, rgba(255,255,255,.45) 0%, transparent 0%),
+            radial-gradient(1px 1px at 75%  10%, rgba(255,255,255,.5)  0%, transparent 0%),
+            radial-gradient(1px 1px at 85%  55%, rgba(255,255,255,.35) 0%, transparent 0%),
+            radial-gradient(1px 1px at 90%  30%, rgba(255,255,255,.5)  0%, transparent 0%),
+            radial-gradient(1px 1px at 15%  85%, rgba(255,255,255,.4)  0%, transparent 0%),
+            radial-gradient(1px 1px at 55%  45%, rgba(255,255,255,.3)  0%, transparent 0%),
+            radial-gradient(1.5px 1.5px at 70% 20%, rgba(255,255,255,.6) 0%, transparent 0%),
+            radial-gradient(1.5px 1.5px at 30% 70%, rgba(255,255,255,.55) 0%, transparent 0%),
+            radial-gradient(1.5px 1.5px at 50% 90%, rgba(255,255,255,.5) 0%, transparent 0%);
+          pointer-events: none;
         }
 
-        .login-left-content {
+        .lp-left-inner {
           position: relative;
           z-index: 1;
           padding: 48px;
-          max-width: 460px;
+          max-width: 480px;
           width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
         }
 
-        .login-brand {
+        /* Brand */
+        .lp-brand {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 48px;
+          margin-bottom: 32px;
+          align-self: flex-start;
         }
-        .login-brand-icon {
-          width: 38px; height: 38px;
+        .lp-brand-icon {
+          width: 36px; height: 36px;
           background: linear-gradient(135deg, #2563eb, #3b82f6);
           border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
           color: white;
-          box-shadow: 0 4px 14px rgba(59,130,246,0.5);
+          box-shadow: 0 0 20px rgba(59,130,246,0.5);
+          flex-shrink: 0;
         }
-        .login-brand-icon svg { width: 20px; height: 20px; }
-        .login-brand-name {
-          font-size: 18px; font-weight: 700;
+        .lp-brand-icon svg { width: 18px; height: 18px; }
+        .lp-brand-name {
+          font-size: 17px; font-weight: 700;
           color: white; letter-spacing: -0.3px;
         }
 
-        .login-hero { margin-bottom: 32px; }
-        .login-hero-svg { width: 100%; max-width: 320px; filter: drop-shadow(0 8px 32px rgba(59,130,246,0.25)); }
+        /* Globe */
+        .lp-globe-svg {
+          width: 100%;
+          max-width: 340px;
+          filter: drop-shadow(0 0 40px rgba(59,130,246,0.35));
+          margin-bottom: 24px;
+        }
 
-        .login-headline {
-          font-size: 28px; font-weight: 800;
-          color: white; margin: 0 0 12px;
+        /* Copy */
+        .lp-headline {
+          font-size: 26px; font-weight: 800;
+          color: white; margin: 0 0 10px;
           letter-spacing: -0.5px; line-height: 1.2;
         }
-        .login-subheadline {
-          font-size: 15px; color: #94a3b8;
-          line-height: 1.6; margin: 0 0 36px;
+        .lp-sub {
+          font-size: 14px; color: #94a3b8;
+          line-height: 1.65; margin: 0 0 32px;
         }
 
-        .login-stats {
-          display: flex; align-items: center; gap: 24px;
+        /* Stats */
+        .lp-stats {
+          display: flex;
+          gap: 0;
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 14px;
-          padding: 18px 24px;
+          padding: 16px 24px;
+          width: 100%;
+          justify-content: space-around;
         }
-        .login-stat { display: flex; flex-direction: column; gap: 2px; }
-        .login-stat-value { font-size: 20px; font-weight: 700; color: #60a5fa; }
-        .login-stat-label { font-size: 12px; color: #64748b; font-weight: 500; }
-        .login-stat-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.1); }
+        .lp-stat {
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+        }
+        .lp-stat-val {
+          font-size: 20px; font-weight: 800;
+          color: #60a5fa; letter-spacing: -0.5px;
+        }
+        .lp-stat-label { font-size: 11px; color: #64748b; font-weight: 500; }
 
         /* ── Right ── */
-        .login-right {
+        .lp-right {
           width: 100%;
           display: flex;
           align-items: center;
@@ -244,16 +359,18 @@ export function LoginPage() {
           min-height: 100vh;
         }
         @media (min-width: 1024px) {
-          .login-right { width: 480px; min-width: 480px; flex-shrink: 0; }
+          .lp-right { width: 480px; min-width: 480px; flex-shrink: 0; }
         }
 
-        .login-form-card {
+        .lp-form-card {
           width: 100%;
           max-width: 400px;
           background: white;
           border-radius: 20px;
           padding: 40px 36px;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px -10px rgba(0,0,0,0.12);
+          box-shadow:
+            0 4px 6px -1px rgba(0,0,0,0.07),
+            0 20px 60px -10px rgba(0,0,0,0.12);
         }
       `}</style>
     </div>
