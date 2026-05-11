@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from '../utils/axiosClient';
 import type { TrackHistoryResponse, TripSummary, TrackPosition } from '../types/track';
-import { generateDummyTrack } from '../data/dummyTrackData';
 
 interface UseTracksParams {
   deviceId: string | null;
@@ -18,13 +17,6 @@ export function useTracks({ deviceId, from, to }: UseTracksParams) {
         `/devices/${deviceId}/positions`,
         { params: { from, to } },
       );
-
-      // --- INJECT DUMMY DATA WHEN API RETURNS EMPTY (ISSUE #10) ---
-      if (!data.data || data.data.length < 2) {
-        const dummyPositions = generateDummyTrack(deviceId!, from!, to!);
-        return { success: true, data: dummyPositions };
-      }
-
       return data;
     },
     staleTime: 5 * 60 * 1000,
@@ -50,18 +42,20 @@ export function computeTripSummary(positions: TrackPosition[]): TripSummary {
   }
 
   const first = new Date(positions[0].timestamp).getTime();
-  const last = new Date(positions[positions.length - 1].timestamp).getTime();
+  const last  = new Date(positions[positions.length - 1].timestamp).getTime();
   const durationMinutes = (last - first) / 60000;
   const movingSpeeds = speeds.filter((s) => s > 3);
-  const avgSpeedKmh = movingSpeeds.length > 0 ? movingSpeeds.reduce((a, b) => a + b, 0) / movingSpeeds.length : 0;
+  const avgSpeedKmh = movingSpeeds.length > 0
+    ? movingSpeeds.reduce((a, b) => a + b, 0) / movingSpeeds.length
+    : 0;
 
   return {
-    totalPoints: positions.length,
-    totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
-    maxSpeedKmh: Math.round(Math.max(...speeds)),
-    avgSpeedKmh: Math.round(avgSpeedKmh),
-    durationMinutes: Math.round(durationMinutes),
-    stoppedMinutes: Math.round(stoppedMinutes),
+    totalPoints:      positions.length,
+    totalDistanceKm:  Math.round(totalDistanceKm * 10) / 10,
+    maxSpeedKmh:      Math.round(Math.max(...speeds)),
+    avgSpeedKmh:      Math.round(avgSpeedKmh),
+    durationMinutes:  Math.round(durationMinutes),
+    stoppedMinutes:   Math.round(stoppedMinutes),
   };
 }
 

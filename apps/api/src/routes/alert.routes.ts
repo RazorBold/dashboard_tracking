@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyToken } from '../middleware/auth.middleware';
 import { db } from '../db';
 import { alerts } from '../db/schema';
-import { eq, desc, and, count } from 'drizzle-orm';
+import { eq, desc, and, count, SQL } from 'drizzle-orm';
 
 const router = Router();
 router.use(verifyToken);
@@ -13,6 +13,14 @@ router.use(verifyToken);
  *   name: Alerts
  *   description: Real-time alert management
  */
+
+/** Resolve org filter — super_admin sees all, others scoped to their org */
+function orgFilter(req: any): SQL | undefined {
+  if (req.user?.role === 'super_admin') return undefined;
+  const orgId = req.user?.orgId;
+  if (!orgId) return undefined; // no org → no filter (returns all for their account)
+  return eq(alerts.organizationId, orgId);
+}
 
 /**
  * @swagger
@@ -25,7 +33,7 @@ router.use(verifyToken);
  *     parameters:
  *       - in: query
  *         name: limit
- *         schema: { type: integer, default: 50 }
+ *         schema: { type: integer, default: 100 }
  *       - in: query
  *         name: offset
  *         schema: { type: integer, default: 0 }
@@ -35,14 +43,12 @@ router.use(verifyToken);
  */
 router.get('/', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
-
-    const limit = parseInt((req.query.limit as string) || '50', 10);
+    const limit  = Math.min(parseInt((req.query.limit  as string) || '100', 10), 500);
     const offset = parseInt((req.query.offset as string) || '0', 10);
+    const filter = orgFilter(req);
 
     const data = await db.query.alerts.findMany({
-      where: eq(alerts.organizationId, orgId),
+      where: filter,
       orderBy: [desc(alerts.createdAt)],
       limit,
       offset,
@@ -50,7 +56,8 @@ router.get('/', async (req, res) => {
     });
 
     res.json({ data });
-  } catch {
+  } catch (err) {
+    console.error('GET /alerts error:', err);
     res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 });
@@ -66,24 +73,21 @@ router.get('/', async (req, res) => {
  *     responses:
  *       200:
  *         description: Number of unread alerts
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 unread: { type: integer, example: 7 }
  */
 router.get('/count', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+    const filter = orgFilter(req);
+    const where  = filter
+      ? and(filter, eq(alerts.isRead, false))
+      : eq(alerts.isRead, false);
 
     const result = await db.select({ value: count() })
       .from(alerts)
-      .where(and(eq(alerts.organizationId, orgId), eq(alerts.isRead, false)));
+      .where(where);
 
-    res.json({ unread: result[0].value });
-  } catch {
+    res.json({ unread: result[0]?.value ?? 0 });
+  } catch (err) {
+    console.error('GET /alerts/count error:', err);
     res.status(500).json({ error: 'Failed to count alerts' });
   }
 });
@@ -96,21 +100,18 @@ router.get('/count', async (req, res) => {
  *     tags: [Alerts]
  *     security:
  *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: All alerts marked as read
  */
 router.put('/read-all', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+    const filter = orgFilter(req);
+    const where  = filter
+      ? and(filter, eq(alerts.isRead, false))
+      : eq(alerts.isRead, false);
 
-    await db.update(alerts)
-      .set({ isRead: true })
-      .where(and(eq(alerts.organizationId, orgId), eq(alerts.isRead, false)));
-
+    await db.update(alerts).set({ isRead: true }).where(where);
     res.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error('PUT /alerts/read-all error:', err);
     res.status(500).json({ error: 'Failed to update alerts' });
   }
 });
@@ -128,26 +129,24 @@ router.put('/read-all', async (req, res) => {
  *         name: id
  *         required: true
  *         schema: { type: string, format: uuid }
- *     responses:
- *       200:
- *         description: Alert updated
- *       404:
- *         description: Alert not found
  */
 router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+    const filter = orgFilter(req);
+    const where  = filter
+      ? and(eq(alerts.id, id), filter)
+      : eq(alerts.id, id);
 
     const [updated] = await db.update(alerts)
       .set({ isRead: true })
-      .where(and(eq(alerts.id, id), eq(alerts.organizationId, orgId)))
+      .where(where)
       .returning();
 
     if (!updated) return res.status(404).json({ error: 'Alert not found' });
     res.json({ success: true, alert: updated });
-  } catch {
+  } catch (err) {
+    console.error('PUT /alerts/:id/read error:', err);
     res.status(500).json({ error: 'Failed to update alert' });
   }
 });

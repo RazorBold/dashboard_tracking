@@ -69,9 +69,9 @@ export const processIncomingLocation = async (imei: string, payload: LocationPay
       timestamp,
     });
 
-    // 3. Update device lastOnline
+    // 3. Update device lastOnline + mark online
     await db.update(devices)
-      .set({ lastOnline: new Date() })
+      .set({ lastOnline: new Date(), status: 'online' })
       .where(eq(devices.id, device.id));
 
     // 4. Save latest to Redis
@@ -109,31 +109,57 @@ export const getLatestPosition = async (deviceId: string) => {
   return position || null;
 };
 
+export interface LatestPosition {
+  lat: number;
+  lng: number;
+  speed: number;
+  heading?: number;
+  altitude?: number;
+  satellites?: number;
+  gsmSignal?: number;
+  timestamp?: string;
+}
+
 export const getLatestPositions = async (
   deviceIds: string[],
-): Promise<Record<string, { lat: number; lng: number; speed: number }>> => {
+): Promise<Record<string, LatestPosition>> => {
   if (deviceIds.length === 0) return {};
 
-  const result: Record<string, { lat: number; lng: number; speed: number }> = {};
+  const result: Record<string, LatestPosition> = {};
 
-  // Fetch latest position for each device (uses same path as getLatestPosition)
   await Promise.all(
     deviceIds.map(async (id) => {
       try {
-        // Try Redis first
         const cached = await redisClient.get(`device:${id}:position`);
         if (cached) {
           const pos = JSON.parse(cached);
-          result[id] = { lat: pos.lat, lng: pos.lng, speed: pos.speed ?? 0 };
+          result[id] = {
+            lat: pos.lat,
+            lng: pos.lng,
+            speed: pos.speed ?? 0,
+            heading: pos.heading,
+            altitude: pos.altitude,
+            satellites: pos.satellites,
+            gsmSignal: pos.gsmSignal,
+            timestamp: pos.timestamp,
+          };
           return;
         }
-        // Fallback to DB
         const pos = await db.query.devicePositions.findFirst({
           where: eq(devicePositions.deviceId, id),
           orderBy: (p, { desc: d }) => [d(p.timestamp)],
         });
         if (pos) {
-          result[id] = { lat: pos.latitude, lng: pos.longitude, speed: pos.speed ?? 0 };
+          result[id] = {
+            lat: pos.latitude,
+            lng: pos.longitude,
+            speed: pos.speed ?? 0,
+            heading: pos.heading ?? undefined,
+            altitude: pos.altitude ?? undefined,
+            satellites: pos.satellites ?? undefined,
+            gsmSignal: pos.gsmSignal ?? undefined,
+            timestamp: pos.timestamp.toISOString(),
+          };
         }
       } catch {
         // skip this device on error

@@ -20,9 +20,10 @@ const mockDevice: Device = {
   batteryLevel: 85,
   gnssType: 'GPS+BDS',
   satellites: 12,
-  gsmSignal: '4G (Strong)',
-  lastOnline: '2026-04-29 00:00:00',
-  lastFix: '2026-04-29 00:00:00',
+  gsmSignal: 25,
+  gsmSignalLabel: '4G (Strong)',
+  lastOnline: '2026-04-29T00:00:00.000Z',
+  positionTimestamp: '2026-04-29T00:00:00.000Z',
   todayMileage: 124.5,
   vehicle: {
     ownerName: 'Budi Santoso',

@@ -1,15 +1,20 @@
-import amqplib, { type Channel, type Connection } from 'amqplib';
+import amqplib, { type Channel, type ChannelModel } from 'amqplib';
 import { env } from './env';
 import { logger } from './logger';
 import { processIncomingLocation } from '../services/tracking.service';
+import { processIncomingAlert } from '../services/alert.service';
+import { processIncomingObd, processIncomingDtc } from '../services/obd.service';
 import { db } from '../db';
 import { deviceCommands } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 // ─── Exchange / Queue names ────────────────────────────
-const EXCHANGE      = 'amq.topic';          // built-in topic exchange (used by MQTT plugin)
+const EXCHANGE      = 'amq.topic';
 const POS_QUEUE     = 'iot.position.queue';
+const ALERT_QUEUE   = 'iot.alert.queue';
 const CMD_QUEUE     = 'iot.command.response.queue';
+const OBD_QUEUE     = 'iot.obd.queue';
+const DTC_QUEUE     = 'iot.dtc.queue';
 const DLX          = 'iot.dlx';
 const DEAD_QUEUE    = 'iot.dead.queue';
 
@@ -17,7 +22,7 @@ let _channel: Channel | null = null;
 
 // ─── Connect & setup ──────────────────────────────────
 export async function connectRabbitMQ(): Promise<void> {
-  let connection: Connection;
+  let connection: ChannelModel;
   try {
     connection = await amqplib.connect(env.RABBITMQ_URL);
   } catch (err) {
@@ -28,7 +33,7 @@ export async function connectRabbitMQ(): Promise<void> {
   connection.on('error', (err) => logger.error({ err }, 'RabbitMQ connection error'));
   connection.on('close', () => logger.warn('RabbitMQ connection closed'));
 
-  const channel = await connection.createChannel();
+  const channel = await (connection as any).createChannel();
   _channel = channel;
 
   // Dead-letter exchange + queue (catch failed messages for manual inspection)
@@ -43,6 +48,27 @@ export async function connectRabbitMQ(): Promise<void> {
   });
   await channel.bindQueue(POS_QUEUE, EXCHANGE, 'device.#.position');
 
+  // Alert queue — device-side events (SOS, vibration, collision, etc.)
+  await channel.assertQueue(ALERT_QUEUE, {
+    durable: true,
+    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.alert' },
+  });
+  await channel.bindQueue(ALERT_QUEUE, EXCHANGE, 'device.#.alert');
+
+  // OBD snapshot queue — device.{IMEI}.obd
+  await channel.assertQueue(OBD_QUEUE, {
+    durable: true,
+    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.obd' },
+  });
+  await channel.bindQueue(OBD_QUEUE, EXCHANGE, 'device.#.obd');
+
+  // DTC fault code queue — device.{IMEI}.dtc
+  await channel.assertQueue(DTC_QUEUE, {
+    durable: true,
+    arguments: { 'x-dead-letter-exchange': DLX, 'x-dead-letter-routing-key': 'dead.dtc' },
+  });
+  await channel.bindQueue(DTC_QUEUE, EXCHANGE, 'device.#.dtc');
+
   // Command response queue
   await channel.assertQueue(CMD_QUEUE, {
     durable: true,
@@ -56,7 +82,7 @@ export async function connectRabbitMQ(): Promise<void> {
   logger.info('RabbitMQ connected — queues ready');
 
   // ─── Consumer: device position ───────────────────────
-  channel.consume(POS_QUEUE, async (msg) => {
+  channel.consume(POS_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
     if (!msg) return;
     try {
       // Routing key: device.{IMEI}.position
@@ -71,8 +97,54 @@ export async function connectRabbitMQ(): Promise<void> {
     }
   }, { noAck: false });
 
+  // ─── Consumer: device alert (SOS, vibration, collision, …) ─────────────────
+  channel.consume(ALERT_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
+    if (!msg) return;
+    try {
+      // Routing key: device.{IMEI}.alert
+      const parts = msg.fields.routingKey.split('.');
+      const imei = parts.slice(1, -1).join('.');
+      const payload = JSON.parse(msg.content.toString());
+      await processIncomingAlert(imei, payload);
+      channel.ack(msg);
+    } catch (err) {
+      logger.error({ err, routingKey: msg.fields.routingKey }, 'Failed to process alert message');
+      channel.nack(msg, false, false);
+    }
+  }, { noAck: false });
+
+  // ─── Consumer: OBD snapshot ──────────────────────────
+  channel.consume(OBD_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
+    if (!msg) return;
+    try {
+      const parts = msg.fields.routingKey.split('.');
+      const imei  = parts.slice(1, -1).join('.');
+      const payload = JSON.parse(msg.content.toString());
+      await processIncomingObd(imei, payload);
+      channel.ack(msg);
+    } catch (err) {
+      logger.error({ err, routingKey: msg.fields.routingKey }, 'Failed to process OBD message');
+      channel.nack(msg, false, false);
+    }
+  }, { noAck: false });
+
+  // ─── Consumer: DTC fault codes ────────────────────────
+  channel.consume(DTC_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
+    if (!msg) return;
+    try {
+      const parts = msg.fields.routingKey.split('.');
+      const imei  = parts.slice(1, -1).join('.');
+      const payload = JSON.parse(msg.content.toString());
+      await processIncomingDtc(imei, payload);
+      channel.ack(msg);
+    } catch (err) {
+      logger.error({ err, routingKey: msg.fields.routingKey }, 'Failed to process DTC message');
+      channel.nack(msg, false, false);
+    }
+  }, { noAck: false });
+
   // ─── Consumer: command response ──────────────────────
-  channel.consume(CMD_QUEUE, async (msg) => {
+  channel.consume(CMD_QUEUE, async (msg: amqplib.ConsumeMessage | null) => {
     if (!msg) return;
     try {
       const payload = JSON.parse(msg.content.toString()) as {

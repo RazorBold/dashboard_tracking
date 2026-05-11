@@ -8,6 +8,11 @@ import { drivers } from '../db/schema';
 const router = Router();
 router.use(verifyToken);
 
+function resolveOrgId(req: any): string | null {
+  if (req.user?.role === 'super_admin') return null;
+  return req.user?.orgId ?? null;
+}
+
 /**
  * @swagger
  * tags:
@@ -160,12 +165,13 @@ function computeLicenseStatus(licenseExpiry: Date | null): string {
 // ─── List drivers ─────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+    const orgId = resolveOrgId(req);
 
     const { search, registerPlace, licenseExpired, page = '1', limit = '50' } = req.query;
 
-    const conditions: ReturnType<typeof eq>[] = [eq(drivers.organizationId, orgId)];
+    const conditions: ReturnType<typeof eq>[] = orgId
+      ? [eq(drivers.organizationId, orgId)]
+      : [];
 
     if (search) {
       conditions.push(
@@ -206,11 +212,10 @@ router.get('/', async (req, res) => {
 // ─── Export CSV ───────────────────────────────────────
 router.get('/export', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
+    const orgId = resolveOrgId(req);
 
     const data = await db.query.drivers.findMany({
-      where: eq(drivers.organizationId, orgId),
+      where: orgId ? eq(drivers.organizationId, orgId) : undefined,
       orderBy: [desc(drivers.createdAt)],
     });
 
@@ -250,7 +255,7 @@ const driverSchema = z.object({
 
 router.post('/', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
+    const orgId = resolveOrgId(req);
     if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
 
     const body = driverSchema.parse(req.body);
@@ -274,7 +279,7 @@ router.post('/', async (req, res) => {
 // ─── Update driver ────────────────────────────────────
 router.put('/:id', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
+    const orgId = resolveOrgId(req);
     if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
 
     const body = driverSchema.partial().parse(req.body);
@@ -307,7 +312,7 @@ router.put('/:id', async (req, res) => {
 // ─── Delete driver ────────────────────────────────────
 router.delete('/:id', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
+    const orgId = resolveOrgId(req);
     if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
 
     const [deleted] = await db.delete(drivers)

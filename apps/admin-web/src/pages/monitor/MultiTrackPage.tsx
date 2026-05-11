@@ -108,7 +108,7 @@ export function MonitorMultiTrackPage() {
             <div className="bg-white/90 rounded-2xl px-8 py-6 text-center shadow-xl border border-slate-200 max-w-xs">
               <div className="text-4xl mb-3">📭</div>
               <p className="font-semibold text-slate-700 text-sm">No track data found</p>
-              <p className="text-xs text-slate-400 mt-1">Try a different date range or run pnpm db:seed</p>
+              <p className="text-xs text-slate-400 mt-1">No GPS data recorded for this time range. Try a wider date range.</p>
             </div>
           </div>
         )}

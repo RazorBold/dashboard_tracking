@@ -9,6 +9,7 @@ import { driverRouter } from './driver.routes';
 import { reportTemplatesRouter } from './report-templates.routes';
 import { autoReportsRouter } from './auto-reports.routes';
 import { geofenceRouter } from './geofence.routes';
+import { obdRouter } from './obd.routes';
 
 export const apiRouter = Router();
 
@@ -23,6 +24,7 @@ apiRouter.use('/drivers', driverRouter);
 apiRouter.use('/report-templates', reportTemplatesRouter);
 apiRouter.use('/auto-reports', autoReportsRouter);
 apiRouter.use('/geofences', geofenceRouter);
+apiRouter.use('/obd', obdRouter);
 
 // Health check
 apiRouter.get('/health', (_req, res) => {

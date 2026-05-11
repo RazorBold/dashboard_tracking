@@ -1,15 +1,16 @@
-import { eq, and, gte, lte, inArray, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, inArray, desc, SQL } from 'drizzle-orm';
 import { db } from '../db';
 import { reportTemplates, autoReports, devicePositions, devices } from '../db/schema';
 import type { ReportTemplate, NewReportTemplate, AutoReport, NewAutoReport } from '../db/schema';
 
 // ─── Report Templates ────────────────────────────────
 
-export async function listReportTemplates(orgId: string): Promise<ReportTemplate[]> {
+export async function listReportTemplates(orgId: string | null): Promise<ReportTemplate[]> {
+  const where: SQL | undefined = orgId ? eq(reportTemplates.organizationId, orgId) : undefined;
   return db
     .select()
     .from(reportTemplates)
-    .where(eq(reportTemplates.organizationId, orgId))
+    .where(where)
     .orderBy(desc(reportTemplates.createdAt));
 }
 
@@ -134,11 +135,12 @@ export async function runReport(id: string, orgId: string): Promise<{ csv: strin
 
 // ─── Auto Reports ────────────────────────────────────
 
-export async function listAutoReports(orgId: string): Promise<AutoReport[]> {
+export async function listAutoReports(orgId: string | null): Promise<AutoReport[]> {
+  const where: SQL | undefined = orgId ? eq(autoReports.organizationId, orgId) : undefined;
   return db
     .select()
     .from(autoReports)
-    .where(eq(autoReports.organizationId, orgId))
+    .where(where)
     .orderBy(desc(autoReports.createdAt));
 }
 

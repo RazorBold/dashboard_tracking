@@ -7,6 +7,7 @@ vi.mock('../../services/device.service', () => ({
   createDevice: vi.fn(),
   updateDevice: vi.fn(),
   deleteDevice: vi.fn(),
+  computeDeviceStatus: vi.fn().mockReturnValue('online'),
 }));
 
 vi.mock('../../services/tracking.service', () => ({

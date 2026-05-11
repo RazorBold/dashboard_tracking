@@ -8,6 +8,14 @@ type ApiEnvelope = {
   meta: DeviceListResponse['meta'];
 };
 
+function gsmLabel(signal?: number | null): string {
+  if (signal == null) return 'Unknown';
+  if (signal >= 20) return '4G (Strong)';
+  if (signal >= 15) return '4G (Good)';
+  if (signal >= 10) return '3G (Fair)';
+  return '2G (Weak)';
+}
+
 export function useDevices(page = 1, limit = 100) {
   return useQuery<DeviceListResponse>({
     queryKey: ['devices', page, limit],
@@ -16,35 +24,30 @@ export function useDevices(page = 1, limit = 100) {
         `/devices?page=${page}&limit=${limit}`,
       );
 
-      // --- INJECT DUMMY DATA FOR UI TESTING (ISSUE #10) ---
-      const dummyData = data.data.map((device) => {
+      const enriched = data.data.map((device) => {
         const isOnline = device.status === 'online';
         const isMoving = isOnline && (device.speed ?? 0) > 0;
-        
+
         return {
           ...device,
+          // Real telemetry from API — use as-is
+          // Computed / display helpers
           accStatus: isOnline ? isMoving : false,
-          parkedDuration: !isMoving ? '2h 15m' : undefined,
-          batteryVoltage: '12.4V',
-          batteryLevel: Math.floor(Math.random() * 40) + 60, // 60-100
+          parkedDuration: !isMoving && isOnline ? '—' : undefined,
           gnssType: 'GPS+BDS',
-          satellites: isOnline ? Math.floor(Math.random() * 8) + 8 : 0, // 8-15
-          gsmSignal: isOnline ? '4G (Strong)' : 'Offline',
-          lastOnline: new Date().toISOString(),
-          lastFix: new Date().toISOString(),
-          todayMileage: parseFloat((Math.random() * 100).toFixed(1)),
-          vehicle: {
-            ownerName: 'Budi Santoso',
-            phone: '081234567890',
-            plateNo: `B ${Math.floor(Math.random() * 8999) + 1000} XYZ`,
-            make: 'Toyota',
-            model: 'Avanza',
-            vin: 'MHF' + Math.random().toString().slice(2, 12),
-          },
+          gsmSignalLabel: isOnline ? gsmLabel(device.gsmSignal) : 'Offline',
+          // lastFix = timestamp of latest GPS position (real)
+          lastFix: device.positionTimestamp ?? device.lastOnline ?? undefined,
+          // Dummy battery (no real sensor data yet)
+          batteryVoltage: '12.4V',
+          batteryLevel: isOnline ? Math.floor(Math.random() * 20) + 75 : 30,
+          // Dummy mileage (will be replaced when mileage tracking is added)
+          todayMileage: isOnline ? parseFloat((Math.random() * 100).toFixed(1)) : 0,
+          vehicle: (device as any).vehicle ?? undefined,
         };
       });
 
-      return { data: dummyData, meta: data.meta };
+      return { data: enriched, meta: data.meta };
     },
     refetchInterval: 15_000,
   });

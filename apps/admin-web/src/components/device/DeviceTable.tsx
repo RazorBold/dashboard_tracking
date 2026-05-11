@@ -14,6 +14,17 @@ const STATUS_CLASS: Record<DeviceStatus, string> = {
   expired:  'device-badge device-badge--red',
 };
 
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 export function DeviceTable({ devices, onEdit, onDelete }: Props) {
   if (devices.length === 0) {
     return <div className="device-table__empty">No devices found.</div>;
@@ -24,9 +35,10 @@ export function DeviceTable({ devices, onEdit, onDelete }: Props) {
       <table className="device-table">
         <thead>
           <tr>
-            <th style={{ width: '35%' }}>Device</th>
+            <th style={{ width: '30%' }}>Device</th>
             <th>Model</th>
             <th>Status</th>
+            <th>Last Update</th>
             <th style={{ textAlign: 'right' }}>Actions</th>
           </tr>
         </thead>
@@ -40,6 +52,11 @@ export function DeviceTable({ devices, onEdit, onDelete }: Props) {
               <td className="device-table__model">{device.model ?? '—'}</td>
               <td>
                 <span className={STATUS_CLASS[device.status]}>{device.status}</span>
+              </td>
+              <td className="device-table__lastonline">
+                <span title={device.lastOnline ? new Date(device.lastOnline).toLocaleString('id-ID') : undefined}>
+                  {timeAgo(device.lastOnline)}
+                </span>
               </td>
               <td>
                 <div className="device-table__actions" style={{ justifyContent: 'flex-end' }}>

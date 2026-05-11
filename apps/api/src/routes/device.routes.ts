@@ -1,9 +1,13 @@
 import { Router, Request, Response, NextFunction, IRouter } from 'express';
 import { z } from 'zod';
+import { inArray } from 'drizzle-orm';
 import { validate, verifyToken } from '../middleware';
 import * as deviceService from '../services/device.service';
+import { computeDeviceStatus } from '../services/device.service';
 import * as trackingService from '../services/tracking.service';
 import * as commandService from '../services/command.service';
+import { db } from '../db';
+import { vehicles } from '../db/schema';
 
 export const deviceRouter: IRouter = Router();
 deviceRouter.use(verifyToken);
@@ -84,16 +88,46 @@ deviceRouter.get(
       const orgId = req.user?.role === 'super_admin' ? undefined : req.user?.orgId;
       const result = await deviceService.listDevices({ ...(req.query as any), orgId });
 
-      // Enrich each device with its latest GPS position
+      // Enrich each device with latest GPS position + linked vehicle
       const deviceIds = result.data.map((d) => d.id);
-      const positions = await trackingService.getLatestPositions(deviceIds);
+      const [positions, vehicleRows] = await Promise.all([
+        trackingService.getLatestPositions(deviceIds),
+        deviceIds.length > 0
+          ? db.select().from(vehicles).where(inArray(vehicles.deviceId, deviceIds))
+          : Promise.resolve([]),
+      ]);
 
-      const data = result.data.map((d) => ({
-        ...d,
-        lat: positions[d.id]?.lat ?? null,
-        lng: positions[d.id]?.lng ?? null,
-        speed: positions[d.id]?.speed ?? null,
-      }));
+      const vehicleByDeviceId = Object.fromEntries(
+        vehicleRows.map((v) => [v.deviceId!, v]),
+      );
+
+      const data = result.data.map((d) => {
+        const pos = positions[d.id];
+        const veh = vehicleByDeviceId[d.id];
+        return {
+          ...d,
+          status: computeDeviceStatus(d.lastOnline, d.expiresAt),
+          lat: pos?.lat ?? null,
+          lng: pos?.lng ?? null,
+          speed: pos?.speed ?? null,
+          heading: pos?.heading ?? null,
+          altitude: pos?.altitude ?? null,
+          satellites: pos?.satellites ?? null,
+          gsmSignal: pos?.gsmSignal ?? null,
+          positionTimestamp: pos?.timestamp ?? null,
+          lastOnline: d.lastOnline ? d.lastOnline.toISOString() : null,
+          vehicle: veh
+            ? {
+                ownerName: veh.ownerName ?? '',
+                phone: veh.ownerPhone ?? '',
+                plateNo: veh.plateNo,
+                make: veh.make ?? '',
+                model: veh.model ?? '',
+                vin: veh.vin ?? '',
+              }
+            : undefined,
+        };
+      });
 
       res.json({ success: true, data, meta: result.meta });
     } catch (err: any) {

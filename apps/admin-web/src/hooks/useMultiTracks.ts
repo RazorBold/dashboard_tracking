@@ -3,7 +3,6 @@ import axiosClient from '../utils/axiosClient';
 import type { TrackHistoryResponse, TrackPosition } from '../types/track';
 import { computeTripSummary } from './useTracks';
 import type { TripSummary } from '../types/track';
-import { generateDummyTrack } from '../data/dummyTrackData';
 
 export interface DeviceTrack {
   deviceId: string;
@@ -28,15 +27,12 @@ export function useMultiTracks({ deviceIds, from, to }: MultiTrackParams): Devic
       queryFn: async (): Promise<TrackPosition[]> => {
         const params = new URLSearchParams({
           from: new Date(from!).toISOString(),
-          to: new Date(to!).toISOString(),
+          to:   new Date(to!).toISOString(),
         });
         const { data } = await axiosClient.get<TrackHistoryResponse>(
           `/devices/${deviceId}/positions?${params}`,
         );
-        if (!data.data || data.data.length < 2) {
-          return generateDummyTrack(deviceId, from!, to!);
-        }
-        return data.data;
+        return data.data ?? [];
       },
       enabled: enabled && !!deviceId,
       staleTime: 5 * 60 * 1000,
@@ -44,14 +40,14 @@ export function useMultiTracks({ deviceIds, from, to }: MultiTrackParams): Devic
   });
 
   return deviceIds.map((deviceId, i) => {
-    const result = results[i];
+    const result    = results[i];
     const positions = (result?.data ?? []) as TrackPosition[];
     return {
       deviceId,
       positions,
-      summary: positions.length >= 2 ? computeTripSummary(positions) : null,
+      summary:   positions.length >= 2 ? computeTripSummary(positions) : null,
       isLoading: result?.isLoading ?? false,
-      isError: result?.isError ?? false,
+      isError:   result?.isError   ?? false,
     };
   });
 }

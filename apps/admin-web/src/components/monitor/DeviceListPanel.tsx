@@ -8,14 +8,32 @@ interface Props {
   onSelect: (device: Device) => void;
 }
 
-type StatusFilter = 'all' | 'online' | 'offline';
+type StatusFilter = 'all' | 'online' | 'offline' | 'inactive';
 
 const STATUS_CLASS: Record<DeviceStatus, string> = {
-  online: 'device-panel__badge--online',
-  offline: 'device-panel__badge--offline',
+  online:   'device-panel__badge--online',
+  offline:  'device-panel__badge--offline',
   inactive: 'device-panel__badge--inactive',
-  expired: 'device-panel__badge--expired',
+  expired:  'device-panel__badge--expired',
 };
+
+const STATUS_ACCENT: Record<DeviceStatus, string> = {
+  online:   '#10b981',
+  offline:  '#64748b',
+  inactive: '#f59e0b',
+  expired:  '#ef4444',
+};
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return 'Never';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
   const [collapsed, setCollapsed] = useState(false);
@@ -24,8 +42,9 @@ export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
 
   const filtered = useMemo(() => {
     return devices.filter((d) => {
-      if (statusFilter === 'online' && d.status !== 'online') return false;
-      if (statusFilter === 'offline' && d.status !== 'offline') return false;
+      if (statusFilter === 'online'   && d.status !== 'online')   return false;
+      if (statusFilter === 'offline'  && d.status !== 'offline')  return false;
+      if (statusFilter === 'inactive' && d.status !== 'inactive') return false;
       if (search) {
         const q = search.toLowerCase();
         return d.name.toLowerCase().includes(q) || d.imei.includes(q);
@@ -33,6 +52,12 @@ export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
       return true;
     });
   }, [devices, search, statusFilter]);
+
+  const counts = useMemo(() => ({
+    online:   devices.filter(d => d.status === 'online').length,
+    inactive: devices.filter(d => d.status === 'inactive').length,
+    offline:  devices.filter(d => d.status === 'offline' || d.status === 'expired').length,
+  }), [devices]);
 
   if (collapsed) {
     return (
@@ -79,15 +104,30 @@ export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
 
       {/* Status filter tabs */}
       <div className="device-panel__tabs" role="group" aria-label="Status filter">
-        {(['all', 'online', 'offline'] as StatusFilter[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setStatusFilter(tab)}
-            className={`device-panel__tab${statusFilter === tab ? ' device-panel__tab--active' : ''}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`device-panel__tab${statusFilter === 'all' ? ' device-panel__tab--active' : ''}`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setStatusFilter('online')}
+          className={`device-panel__tab${statusFilter === 'online' ? ' device-panel__tab--active' : ''}`}
+        >
+          Online{counts.online > 0 && <span className="device-panel__tab-count">{counts.online}</span>}
+        </button>
+        <button
+          onClick={() => setStatusFilter('inactive')}
+          className={`device-panel__tab${statusFilter === 'inactive' ? ' device-panel__tab--active' : ''}`}
+        >
+          Inactive{counts.inactive > 0 && <span className="device-panel__tab-count device-panel__tab-count--warn">{counts.inactive}</span>}
+        </button>
+        <button
+          onClick={() => setStatusFilter('offline')}
+          className={`device-panel__tab${statusFilter === 'offline' ? ' device-panel__tab--active' : ''}`}
+        >
+          Offline{counts.offline > 0 && <span className="device-panel__tab-count device-panel__tab-count--off">{counts.offline}</span>}
+        </button>
       </div>
 
       {/* Device list */}
@@ -95,28 +135,46 @@ export function DeviceListPanel({ devices, selectedId, onSelect }: Props) {
         {filtered.length === 0 ? (
           <li className="device-panel__empty">No devices found</li>
         ) : (
-          filtered.map((device) => (
-            <li
-              key={device.id}
-              className={`device-panel__item${selectedId === device.id ? ' device-panel__item--selected' : ''}`}
-              onClick={() => onSelect(device)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && onSelect(device)}
-            >
-              <div className="device-panel__item-header">
-                <span className="device-panel__item-name">{device.name}</span>
-                <span className={`device-panel__badge ${STATUS_CLASS[device.status]}`}>
-                  <span className={`device-panel__badge-dot device-panel__badge-dot--${device.status}`} />
-                  {device.status}
-                </span>
-              </div>
-              <div className="device-panel__item-imei">{device.imei}</div>
-              {device.speed != null && (
-                <div className="device-panel__item-speed">{device.speed} km/h</div>
-              )}
-            </li>
-          ))
+          filtered.map((device) => {
+            const accent = STATUS_ACCENT[device.status];
+            const isSelected = selectedId === device.id;
+            return (
+              <li
+                key={device.id}
+                className={`device-panel__item${isSelected ? ' device-panel__item--selected' : ''}`}
+                style={{ borderLeftColor: accent }}
+                onClick={() => onSelect(device)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onSelect(device)}
+              >
+                {/* Row 1: name + status badge */}
+                <div className="device-panel__item-header">
+                  <span className="device-panel__item-name">{device.name}</span>
+                  <span className={`device-panel__badge ${STATUS_CLASS[device.status]}`}>
+                    <span className={`device-panel__badge-dot device-panel__badge-dot--${device.status}`} />
+                    {device.status}
+                  </span>
+                </div>
+
+                {/* Row 2: plate + IMEI */}
+                <div className="device-panel__item-sub">
+                  {device.vehicle?.plateNo
+                    ? <span className="device-panel__item-plate">{device.vehicle.plateNo}</span>
+                    : null}
+                  <span className="device-panel__item-imei">{device.imei}</span>
+                </div>
+
+                {/* Row 3: last seen + speed chip */}
+                <div className="device-panel__item-meta">
+                  <span className="device-panel__item-lastseen">{timeAgo(device.lastOnline)}</span>
+                  {device.status === 'online' && device.speed != null && (
+                    <span className="device-panel__item-speed-chip">{device.speed} km/h</span>
+                  )}
+                </div>
+              </li>
+            );
+          })
         )}
       </ul>
     </div>

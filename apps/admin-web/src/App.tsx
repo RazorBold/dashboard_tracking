@@ -54,6 +54,9 @@ import { SettingsPage } from './pages/settings/SettingsPage';
 // Geofence pages
 import { GeofencePage } from './pages/geofence';
 
+// OBD pages
+import { OBDRealtimePage, OBDHistoryPage, OBDFaultCodesPage } from './pages/obd';
+
 function App() {
   const hydrate = useAuthStore((state) => state.hydrate);
 
@@ -112,6 +115,12 @@ function App() {
 
             {/* Geo-fence */}
             <Route path="/geofence" element={<GeofencePage />} />
+
+            {/* OBD */}
+            <Route path="/obd/realtime" element={<OBDRealtimePage />} />
+            <Route path="/obd/history"  element={<OBDHistoryPage />} />
+            <Route path="/obd/faults"   element={<OBDFaultCodesPage />} />
+            <Route path="/obd" element={<Navigate to="/obd/realtime" replace />} />
 
             {/* Dashboard redirect (backward compat) */}
             <Route path="/dashboard" element={<Navigate to="/monitor/objects" replace />} />

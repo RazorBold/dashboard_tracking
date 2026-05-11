@@ -11,4 +11,6 @@ export * from './alerts';
 export * from './geofences';
 export * from './device-commands';
 export * from './reports';
+export * from './obd-snapshots';
+export * from './obd-dtcs';
 export * from './relations';

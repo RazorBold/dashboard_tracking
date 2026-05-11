@@ -167,6 +167,22 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
               </div>
             )}
 
+            {/* Last Update */}
+            {device.lastOnline && (
+              <div className="detail-sidebar__row">
+                <Calendar size={14} className="detail-sidebar__icon" />
+                <div className="detail-sidebar__row-content">
+                  <span className="detail-sidebar__label">Last Update</span>
+                  <span className="detail-sidebar__value">
+                    {new Date(device.lastOnline).toLocaleString('id-ID', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    })}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Today's Activity Grid */}
             <div className="detail-sidebar__grid-section">
               <h3 className="detail-sidebar__section-title">Today's Activity</h3>
@@ -209,15 +225,23 @@ export function DeviceDetailSidebar({ device, onClose, address, addressLoading }
                 </div>
                 <div className="detail-sidebar__info-item">
                   <span className="detail-sidebar__label"><Signal size={12} /> GSM Signal</span>
-                  <span className="detail-sidebar__value">{device.gsmSignal ?? '—'}</span>
+                  <span className="detail-sidebar__value">{device.gsmSignalLabel ?? '—'}</span>
                 </div>
                 <div className="detail-sidebar__info-item">
                   <span className="detail-sidebar__label"><Calendar size={12} /> Last Online</span>
-                  <span className="detail-sidebar__value">{device.lastOnline ? new Date(device.lastOnline).toLocaleString() : '—'}</span>
+                  <span className="detail-sidebar__value">
+                    {device.lastOnline
+                      ? new Date(device.lastOnline).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                      : '—'}
+                  </span>
                 </div>
                 <div className="detail-sidebar__info-item">
-                  <span className="detail-sidebar__label"><Calendar size={12} /> Last Fix</span>
-                  <span className="detail-sidebar__value">{device.lastFix ? new Date(device.lastFix).toLocaleString() : '—'}</span>
+                  <span className="detail-sidebar__label"><Calendar size={12} /> Last GPS Fix</span>
+                  <span className="detail-sidebar__value">
+                    {device.positionTimestamp
+                      ? new Date(device.positionTimestamp).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                      : '—'}
+                  </span>
                 </div>
               </div>
             </div>

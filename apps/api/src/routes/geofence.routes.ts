@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { verifyToken } from '../middleware/auth.middleware';
 import * as geofenceService from '../services/geofence.service';
 
+function resolveOrgId(req: any): string | null {
+  if (req.user?.role === 'super_admin') return null; // null = no filter
+  return req.user?.orgId ?? null;
+}
+
 const router = Router();
 router.use(verifyToken);
 
@@ -136,9 +141,7 @@ const updateSchema = createSchema.partial();
 // ─── List ─────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
-
+    const orgId = resolveOrgId(req);
     const list = await geofenceService.listGeofences(orgId);
     res.json({ data: list });
   } catch (err) {

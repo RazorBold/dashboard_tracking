@@ -6,6 +6,11 @@ import * as reportService from '../services/report.service';
 const router = Router();
 router.use(verifyToken);
 
+function resolveOrgId(req: any): string | null {
+  if (req.user?.role === 'super_admin') return null;
+  return req.user?.orgId ?? null;
+}
+
 /**
  * @swagger
  * tags:
@@ -108,9 +113,7 @@ const createSchema = z.object({
 // ─── List ─────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const orgId = req.user?.orgId;
-    if (!orgId) return res.status(403).json({ error: 'No organization assigned' });
-
+    const orgId = resolveOrgId(req);
     const templates = await reportService.listReportTemplates(orgId);
     res.json({ data: templates });
   } catch (err) {

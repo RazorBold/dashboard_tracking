@@ -7,21 +7,26 @@ export interface Device {
   model?: string | null;
   status: DeviceStatus;
   groupId?: string | null;
+  // Real position data from API
   lat?: number | null;
   lng?: number | null;
   speed?: number | null;
-  // --- New Dummy Telemetry Data ---
+  heading?: number | null;
+  altitude?: number | null;
+  satellites?: number | null;
+  gsmSignal?: number | null;
+  positionTimestamp?: string | null; // timestamp of latest GPS fix
+  lastOnline?: string | null;        // last time device sent data
+  // Enriched telemetry (partially from API, partially computed)
   accStatus?: boolean;
   parkedDuration?: string;
   batteryVoltage?: string;
   batteryLevel?: number;
   gnssType?: string;
-  satellites?: number;
-  gsmSignal?: string;
-  lastOnline?: string;
+  gsmSignalLabel?: string;
   lastFix?: string;
   todayMileage?: number;
-  // --- New Dummy Vehicle Info ---
+  // Linked vehicle info
   vehicle?: {
     ownerName: string;
     phone: string;

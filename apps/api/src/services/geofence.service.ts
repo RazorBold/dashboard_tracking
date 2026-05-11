@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, SQL } from 'drizzle-orm';
 import { db } from '../db';
 import { geofences } from '../db/schema';
 import type { Geofence, NewGeofence } from '../db/schema';
@@ -15,11 +15,12 @@ export interface GeofencePayload {
   assignedDeviceIds?: string[];
 }
 
-export async function listGeofences(orgId: string): Promise<Geofence[]> {
+export async function listGeofences(orgId: string | null): Promise<Geofence[]> {
+  const where: SQL | undefined = orgId ? eq(geofences.organizationId, orgId) : undefined;
   return db
     .select()
     .from(geofences)
-    .where(eq(geofences.organizationId, orgId))
+    .where(where)
     .orderBy(desc(geofences.createdAt));
 }
 

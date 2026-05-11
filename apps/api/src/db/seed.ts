@@ -11,6 +11,10 @@ import { drivers } from './schema/drivers';
 import { geofences } from './schema/geofences';
 import { devicePositions } from './schema/device-positions';
 import { alerts } from './schema/alerts';
+import { obdSnapshots } from './schema/obd-snapshots';
+import { obdDtcs } from './schema/obd-dtcs';
+import type { NewObdSnapshot } from './schema/obd-snapshots';
+import type { NewObdDtc } from './schema/obd-dtcs';
 
 type AlertType = 'acc_on' | 'acc_off' | 'vibration' | 'overspeed' | 'enter_geofence' | 'exit_geofence' | 'collision' | 'sharp_turn_left' | 'sharp_turn_right' | 'sudden_acceleration' | 'sudden_deceleration' | 'low_battery' | 'sos';
 type AlertSeverity = 'info' | 'warning' | 'critical';
@@ -114,6 +118,8 @@ async function seed() {
   console.log('⚠️  Clearing existing data...');
 
   // Clear in dependency order
+  await db.delete(obdDtcs);
+  await db.delete(obdSnapshots);
   await db.delete(alerts);
   await db.delete(devicePositions);
   await db.delete(vehicles);
@@ -468,6 +474,163 @@ async function seed() {
   const unreadCount = alertValues.filter((a) => !a.isRead).length;
   console.log(`     ${alertValues.length} alerts inserted (${unreadCount} unread)`);
 
+  // ─── 11. OBD Snapshots ───────────────────────────────
+  console.log('  🔧 Creating OBD snapshots...');
+
+  const INTERVAL_MIN = 30; // one snapshot every 30 minutes
+
+  const allSnapshotValues: NewObdSnapshot[] = [];
+
+  for (let di = 0; di < insertedDevices.length; di++) {
+    const dev = insertedDevices[di];
+    const seedDev = DEVICE_SEEDS[di];
+
+    // End time: online → now, offline → lastOnline, inactive/expired → 30d ago
+    const endTime =
+      seedDev.status === 'online'   ? now :
+      seedDev.status === 'offline'  ? new Date(now.getTime() - (seedDev.hoursOffline ?? 6) * 3_600_000) :
+                                      new Date(now.getTime() - 30 * 24 * 3_600_000);
+
+    const hoursBack =
+      seedDev.status === 'online'   ? 24 :
+      seedDev.status === 'offline'  ? (seedDev.hoursOffline ?? 6) + 18 :
+                                      48;
+
+    const count = Math.floor(hoursBack * 60 / INTERVAL_MIN);
+
+    // Per-device base values for realistic variation
+    const baseRpm       = 750  + (di % 12) * 40;
+    const baseCoolant   = 82   + (di % 6)  * 3;
+    const baseFuel      = 20   + (di % 9)  * 8;   // 20 – 92 %
+    const baseOdometer  = 40_000 + di * 4_500;
+
+    for (let pi = 0; pi < count; pi++) {
+      const ts = new Date(endTime.getTime() - (count - 1 - pi) * INTERVAL_MIN * 60_000);
+
+      // Simulate 4 drive/stop cycles using a sine wave
+      const phase        = (pi / count) * Math.PI * 8;
+      const raw          = Math.sin(phase);
+      const isDriving    = raw > 0;
+      const intensity    = Math.max(0, raw);   // 0 – 1
+
+      const rpm         = Math.round(baseRpm + (isDriving ? intensity * 3_200 : 0) + (Math.random() - 0.5) * 150);
+      const speed       = isDriving ? Math.round(intensity * 85 + Math.random() * 15) : 0;
+      const throttle    = isDriving ? +(intensity * 55 + Math.random() * 8).toFixed(2) : +(2 + Math.random() * 3).toFixed(2);
+      const engineLoad  = +(isDriving ? intensity * 65 + 15 + (Math.random() - 0.5) * 8 : 12 + Math.random() * 8).toFixed(2);
+      const coolantTemp = Math.round(baseCoolant + intensity * 10 + (Math.random() - 0.5) * 4);
+      const intakeTemp  = Math.round(25 + (Math.random() - 0.5) * 12);
+      const timingAdv   = +(8 + intensity * 12 + Math.random() * 2).toFixed(2);
+      const mafRate     = +(isDriving ? 5 + intensity * 28 + Math.random() * 5 : 1.5 + Math.random() * 1.5).toFixed(2);
+      const fuelLevel   = +Math.max(4, baseFuel - (pi / count) * 18 + (Math.random() - 0.5) * 1).toFixed(2);
+      const fuelPressure= Math.round(290 + Math.random() * 60);
+      const shortFT     = +((Math.random() - 0.5) * 8).toFixed(2);
+      const longFT      = +((Math.random() - 0.5) * 6).toFixed(2);
+      const odometer    = baseOdometer + Math.round(pi * speed * INTERVAL_MIN / 60);
+      const battV       = +(isDriving ? 13.8 + Math.random() * 0.4 : 12.1 + Math.random() * 0.3).toFixed(2);
+      const o2V         = +(0.45 + Math.random() * 0.5).toFixed(2);
+
+      allSnapshotValues.push({
+        deviceId:      dev.id,
+        imei:          seedDev.imei,
+        timestamp:     ts,
+        rpm,
+        engineLoad:    String(engineLoad),
+        coolantTemp,
+        intakeTemp,
+        throttle:      String(throttle),
+        timingAdvance: String(timingAdv),
+        mafRate:       String(mafRate),
+        fuelLevel:     String(fuelLevel),
+        fuelPressure,
+        shortFuelTrim: String(shortFT),
+        longFuelTrim:  String(longFT),
+        vehicleSpeed:  speed,
+        odometer,
+        batteryVoltage:String(battV),
+        o2Voltage:     String(o2V),
+      });
+    }
+  }
+
+  // Batch insert in chunks of 200 to stay within PG parameter limits
+  const CHUNK = 200;
+  for (let i = 0; i < allSnapshotValues.length; i += CHUNK) {
+    await db.insert(obdSnapshots).values(allSnapshotValues.slice(i, i + CHUNK));
+  }
+  console.log(`     ${allSnapshotValues.length} OBD snapshots inserted`);
+
+  // ─── 12. OBD DTC Fault Codes ─────────────────────────
+  console.log('  🚨 Creating OBD fault codes (DTCs)...');
+
+  interface DtcSeed {
+    devIndex: number;
+    code: string;
+    description: string;
+    severity: 'critical' | 'warning' | 'info';
+    status: 'active' | 'cleared';
+    daysAgo: number;
+    clearedDaysAgo?: number;
+  }
+
+  const DTC_SEEDS: DtcSeed[] = [
+    // Jakarta fleet
+    { devIndex: 0,  code: 'P0300', description: 'Random/Multiple Cylinder Misfire Detected',                 severity: 'critical', status: 'active',  daysAgo: 1 },
+    { devIndex: 0,  code: 'P0562', description: 'System Voltage Low',                                         severity: 'warning',  status: 'active',  daysAgo: 3 },
+    { devIndex: 1,  code: 'P0171', description: 'System Too Lean (Bank 1)',                                   severity: 'warning',  status: 'cleared', daysAgo: 7,  clearedDaysAgo: 3 },
+    { devIndex: 1,  code: 'P0113', description: 'Intake Air Temperature Sensor 1 Circuit High Input',         severity: 'info',     status: 'cleared', daysAgo: 10, clearedDaysAgo: 6 },
+    { devIndex: 3,  code: 'P0420', description: 'Catalyst System Efficiency Below Threshold (Bank 1)',        severity: 'warning',  status: 'active',  daysAgo: 5 },
+    { devIndex: 3,  code: 'P0128', description: 'Coolant Thermostat Below Regulating Temperature',           severity: 'info',     status: 'active',  daysAgo: 2 },
+    { devIndex: 5,  code: 'P0217', description: 'Engine Coolant Over Temperature Condition',                  severity: 'critical', status: 'active',  daysAgo: 0.5 },
+    { devIndex: 6,  code: 'P0174', description: 'System Too Lean (Bank 2)',                                   severity: 'warning',  status: 'active',  daysAgo: 4 },
+    { devIndex: 7,  code: 'P0340', description: 'Camshaft Position Sensor Circuit (Bank 1)',                  severity: 'warning',  status: 'cleared', daysAgo: 14, clearedDaysAgo: 8 },
+    { devIndex: 9,  code: 'P0335', description: 'Crankshaft Position Sensor A Circuit',                       severity: 'critical', status: 'cleared', daysAgo: 30, clearedDaysAgo: 25 },
+
+    // Jawa Timur fleet
+    { devIndex: 12, code: 'P0420', description: 'Catalyst System Efficiency Below Threshold (Bank 1)',        severity: 'warning',  status: 'active',  daysAgo: 6 },
+    { devIndex: 14, code: 'P0113', description: 'Intake Air Temperature Sensor 1 Circuit High Input',         severity: 'info',     status: 'active',  daysAgo: 2 },
+    { devIndex: 15, code: 'P0300', description: 'Random/Multiple Cylinder Misfire Detected',                  severity: 'critical', status: 'active',  daysAgo: 1 },
+    { devIndex: 15, code: 'P0174', description: 'System Too Lean (Bank 2)',                                   severity: 'warning',  status: 'active',  daysAgo: 4 },
+    { devIndex: 17, code: 'P0562', description: 'System Voltage Low',                                         severity: 'warning',  status: 'cleared', daysAgo: 5,  clearedDaysAgo: 2 },
+    { devIndex: 19, code: 'P0128', description: 'Coolant Thermostat Below Regulating Temperature',            severity: 'info',     status: 'active',  daysAgo: 3 },
+
+    // Bandung fleet
+    { devIndex: 20, code: 'P0171', description: 'System Too Lean (Bank 1)',                                   severity: 'warning',  status: 'active',  daysAgo: 3 },
+    { devIndex: 21, code: 'P0420', description: 'Catalyst System Efficiency Below Threshold (Bank 1)',        severity: 'warning',  status: 'cleared', daysAgo: 12, clearedDaysAgo: 7 },
+    { devIndex: 22, code: 'P0217', description: 'Engine Coolant Over Temperature Condition',                  severity: 'critical', status: 'active',  daysAgo: 0.25 },
+    { devIndex: 25, code: 'P0340', description: 'Camshaft Position Sensor Circuit (Bank 1)',                  severity: 'warning',  status: 'active',  daysAgo: 8 },
+
+    // Bali fleet
+    { devIndex: 28, code: 'P0300', description: 'Random/Multiple Cylinder Misfire Detected',                  severity: 'critical', status: 'cleared', daysAgo: 10, clearedDaysAgo: 4 },
+    { devIndex: 29, code: 'P0113', description: 'Intake Air Temperature Sensor 1 Circuit High Input',         severity: 'info',     status: 'active',  daysAgo: 1 },
+
+    // Sumatera Utara fleet
+    { devIndex: 35, code: 'P0562', description: 'System Voltage Low',                                         severity: 'warning',  status: 'active',  daysAgo: 2 },
+    { devIndex: 36, code: 'P0174', description: 'System Too Lean (Bank 2)',                                   severity: 'warning',  status: 'active',  daysAgo: 5 },
+    { devIndex: 37, code: 'P0217', description: 'Engine Coolant Over Temperature Condition',                  severity: 'critical', status: 'cleared', daysAgo: 20, clearedDaysAgo: 15 },
+  ];
+
+  const dtcValues: NewObdDtc[] = DTC_SEEDS
+    .filter((d) => d.devIndex < insertedDevices.length)
+    .map((d) => ({
+      deviceId:    insertedDevices[d.devIndex].id,
+      imei:        DEVICE_SEEDS[d.devIndex].imei,
+      code:        d.code,
+      description: d.description,
+      severity:    d.severity,
+      status:      d.status,
+      detectedAt:  new Date(now.getTime() - d.daysAgo * 24 * 3_600_000),
+      clearedAt:   d.clearedDaysAgo != null
+        ? new Date(now.getTime() - d.clearedDaysAgo * 24 * 3_600_000)
+        : null,
+    }));
+
+  if (dtcValues.length > 0) {
+    await db.insert(obdDtcs).values(dtcValues);
+  }
+  const activeDtcCount  = dtcValues.filter((d) => d.status === 'active').length;
+  const clearedDtcCount = dtcValues.filter((d) => d.status === 'cleared').length;
+  console.log(`     ${dtcValues.length} DTC codes inserted (${activeDtcCount} active, ${clearedDtcCount} cleared)`);
+
   console.log('\n✅ Seed complete!');
   const onlineCount  = DEVICE_SEEDS.filter((d) => d.status === 'online').length;
   const offlineCount = DEVICE_SEEDS.filter((d) => d.status === 'offline').length;
@@ -484,7 +647,9 @@ async function seed() {
   ├── ${DEVICE_SEEDS.length} Vehicles
   ├── 20 Drivers
   ├── 8 Geofences
-  └── 50 Alerts     : ${alertValues.filter(a => !a.isRead).length} unread, spread over last 48h
+  ├── 50 Alerts     : ${alertValues.filter(a => !a.isRead).length} unread, spread over last 48h
+  ├── ${allSnapshotValues.length} OBD Snapshots : 30-min intervals, 24h per device
+  └── ${dtcValues.length} DTC Codes     : ${activeDtcCount} active, ${clearedDtcCount} cleared
   `);
 
   await client.end();

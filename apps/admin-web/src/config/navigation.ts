@@ -5,6 +5,7 @@ import {
   Video,
   Truck,
   Shield,
+  Gauge,
   // Monitor sub-menu
   LayoutGrid,
   AlertTriangle,
@@ -21,6 +22,9 @@ import {
   Car,
   MapPin,
   Navigation,
+  // OBD sub-menu
+  Activity,
+  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,12 +37,13 @@ export interface TopMenuItem {
 }
 
 export const topMenuItems: TopMenuItem[] = [
-  { key: 'monitor', label: 'Monitor', icon: Monitor, path: '/monitor' },
-  { key: 'report', label: 'Report', icon: FileText, path: '/report' },
-  { key: 'device', label: 'Device', icon: Cpu, path: '/device' },
-  { key: 'video', label: 'Video', icon: Video, path: '/video' },
-  { key: 'fleet', label: 'Fleet', icon: Truck, path: '/fleet' },
-  { key: 'geofence', label: 'Geo-fence', icon: Shield, path: '/geofence' },
+  { key: 'monitor',  label: 'Monitor',   icon: Monitor,  path: '/monitor' },
+  { key: 'report',   label: 'Report',    icon: FileText, path: '/report' },
+  { key: 'device',   label: 'Device',    icon: Cpu,      path: '/device' },
+  { key: 'video',    label: 'Video',     icon: Video,    path: '/video' },
+  { key: 'fleet',    label: 'Fleet',     icon: Truck,    path: '/fleet' },
+  { key: 'geofence', label: 'Geo-fence', icon: Shield,   path: '/geofence' },
+  { key: 'obd',      label: 'OBD',       icon: Gauge,    path: '/obd' },
 ];
 
 // ─── Sidebar Menu Items (per Module) ──────────────────
@@ -99,6 +104,14 @@ export const sidebarMenus: Record<string, SidebarConfig> = {
     title: 'Geo-fence',
     items: [
       { key: 'geofences', label: 'Geofences', icon: Shield, path: '/geofence' },
+    ],
+  },
+  obd: {
+    title: 'OBD',
+    items: [
+      { key: 'obd-realtime', label: 'Realtime',    icon: Activity,    path: '/obd/realtime' },
+      { key: 'obd-history',  label: 'History',     icon: BarChart3,   path: '/obd/history' },
+      { key: 'obd-faults',   label: 'Fault Codes', icon: ShieldAlert, path: '/obd/faults' },
     ],
   },
 };

@@ -10,6 +10,8 @@ import { refreshTokens } from './refresh-tokens';
 import { devicePositions } from './device-positions';
 import { alerts } from './alerts';
 import { geofences } from './geofences';
+import { obdSnapshots } from './obd-snapshots';
+import { obdDtcs } from './obd-dtcs';
 
 // ─── User Relations ──────────────────────────────────
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -51,6 +53,17 @@ export const devicesRelations = relations(devices, ({ one, many }) => ({
   vehicle: one(vehicles),
   positions: many(devicePositions),
   alerts: many(alerts),
+  obdSnapshots: many(obdSnapshots),
+  obdDtcs: many(obdDtcs),
+}));
+
+// ─── OBD Relations ───────────────────────────────────
+export const obdSnapshotsRelations = relations(obdSnapshots, ({ one }) => ({
+  device: one(devices, { fields: [obdSnapshots.deviceId], references: [devices.id] }),
+}));
+
+export const obdDtcsRelations = relations(obdDtcs, ({ one }) => ({
+  device: one(devices, { fields: [obdDtcs.deviceId], references: [devices.id] }),
 }));
 
 // ─── Device Group Relations ──────────────────────────

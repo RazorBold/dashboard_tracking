@@ -18,13 +18,26 @@ export interface PaginatedResult<T> {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
+// Compute device status from lastOnline + expiresAt timestamps
+export function computeDeviceStatus(
+  lastOnline: Date | null | undefined,
+  expiresAt: Date | null | undefined,
+): Device['status'] {
+  const now = new Date();
+  if (expiresAt && expiresAt < now) return 'expired';
+  if (!lastOnline) return 'offline';
+  const ms = now.getTime() - new Date(lastOnline).getTime();
+  if (ms < 60 * 60 * 1000) return 'online';         // < 1 hour
+  if (ms < 24 * 60 * 60 * 1000) return 'inactive';  // 1-24 hours
+  return 'offline';                                   // > 24 hours
+}
+
 export async function listDevices(params: ListDevicesParams): Promise<PaginatedResult<Device>> {
   const { page, limit, search, status, groupId, orgId } = params;
   const offset = (page - 1) * limit;
 
   const conditions: ReturnType<typeof eq>[] = [];
   if (orgId) conditions.push(eq(devices.organizationId, orgId));
-  if (status) conditions.push(eq(devices.status, status));
   if (groupId) conditions.push(eq(devices.groupId, groupId));
   if (search) {
     conditions.push(
@@ -33,6 +46,17 @@ export async function listDevices(params: ListDevicesParams): Promise<PaginatedR
         ilike(devices.imei, `%${search}%`),
       )!,
     );
+  }
+  // Filter by computed status (based on lastOnline + expiresAt) — not stored enum
+  if (status === 'expired') {
+    conditions.push(sql`${devices.expiresAt} IS NOT NULL AND ${devices.expiresAt} < now()` as any);
+  } else if (status === 'online') {
+    conditions.push(sql`${devices.lastOnline} IS NOT NULL AND ${devices.lastOnline} > now() - interval '1 hour'` as any);
+  } else if (status === 'inactive') {
+    conditions.push(sql`${devices.lastOnline} IS NOT NULL AND ${devices.lastOnline} > now() - interval '1 day' AND ${devices.lastOnline} <= now() - interval '1 hour'` as any);
+  } else if (status === 'offline') {
+    conditions.push(sql`(${devices.lastOnline} IS NULL OR ${devices.lastOnline} <= now() - interval '1 day')` as any);
+    conditions.push(sql`(${devices.expiresAt} IS NULL OR ${devices.expiresAt} >= now())` as any);
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
