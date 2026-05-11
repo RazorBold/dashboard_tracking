@@ -236,13 +236,26 @@ deviceRouter.post(
   validate(createDeviceSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const organizationId =
+      // super_admin can optionally pass organizationId in body;
+      // regular users inherit their orgId from the JWT token.
+      // Never pass undefined to Drizzle — use null so the insert succeeds.
+      const organizationId: string | null =
         req.user?.role === 'super_admin'
-          ? req.body.organizationId
-          : req.user?.orgId;
-      const device = await deviceService.createDevice({ ...req.body, organizationId });
+          ? (req.body.organizationId ?? null)
+          : (req.user?.orgId ?? null);
+
+      const device = await deviceService.createDevice({
+        ...req.body,
+        organizationId,
+      });
+
       res.status(201).json({ success: true, message: 'Device created', data: device });
-    } catch (err) {
+    } catch (err: any) {
+      // Surface a friendly 409 for duplicate IMEI
+      if (err?.statusCode === 409 || err?.status === 409) {
+        res.status(409).json({ success: false, message: err.message });
+        return;
+      }
       next(err);
     }
   },
