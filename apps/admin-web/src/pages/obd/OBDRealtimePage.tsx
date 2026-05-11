@@ -71,7 +71,7 @@ function GaugeCard({ id, label, value, min, max, unit, decimals = 0, inverted = 
         <path
           d={trackPath}
           fill="none"
-          stroke="#1a2540"
+          stroke="#dde3ee"
           strokeWidth={11}
           strokeLinecap="round"
         />
@@ -92,7 +92,7 @@ function GaugeCard({ id, label, value, min, max, unit, decimals = 0, inverted = 
         <text
           x={CX} y={CY - 2}
           textAnchor="middle"
-          fill={value == null ? '#334155' : '#f1f5f9'}
+          fill={value == null ? '#94a3b8' : '#0f172a'}
           fontSize="34"
           fontWeight="800"
           fontFamily="system-ui, -apple-system, sans-serif"
@@ -104,7 +104,7 @@ function GaugeCard({ id, label, value, min, max, unit, decimals = 0, inverted = 
         <text
           x={CX} y={CY + 20}
           textAnchor="middle"
-          fill={value == null ? '#1e293b' : color}
+          fill={value == null ? '#cbd5e1' : color}
           fontSize="12"
           fontWeight="600"
           fontFamily="system-ui, -apple-system, sans-serif"
